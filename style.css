@@ -232,6 +232,31 @@ main {
     opacity: 0.9;
 }
 
+.word-audio-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.3rem;
+    margin-top: 0.45rem;
+}
+
+.word-audio-button {
+    min-height: 34px;
+    padding: 0.25rem;
+    border: 2px solid #64748b;
+    border-radius: 0.45rem;
+    background: #e2e8f0;
+    color: #0f172a;
+    cursor: pointer;
+    font-size: 0.7rem;
+    font-weight: 800;
+}
+
+.word-audio-button:hover,
+.word-audio-button:focus-visible {
+    background: #bae6fd;
+    border-color: #0284c7;
+}
+
 .card-controls {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -495,6 +520,17 @@ main {
 
     .card-type {
         padding: 0.15rem 0.3rem;
+        font-size: 0.55rem;
+    }
+
+    .word-audio-controls {
+        gap: 0.2rem;
+        margin-top: 0.25rem;
+    }
+
+    .word-audio-button {
+        min-height: 28px;
+        padding: 0.15rem;
         font-size: 0.55rem;
     }
 

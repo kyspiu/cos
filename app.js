@@ -26,16 +26,28 @@ const categoryName = document.getElementById("categoryName");
 const categoryEmoji = document.getElementById("categoryEmoji");
 const categoryColor = document.getElementById("categoryColor");
 const categoryMessage = document.getElementById("categoryMessage");
+let activeRecording = null;
 
 function getCurrentCategory() {
     return state.path[state.path.length - 1];
 }
 
 async function loadData() {
-    const [{ data: categories, error: categoriesError }, { data: words, error: wordsError }] = await Promise.all([
+    const [{ data: categories, error: categoriesError }, wordsResult] = await Promise.all([
         supabaseClient.from("categories").select("id, name, emoji, color, parent_id, sort_order").order("sort_order"),
-        supabaseClient.from("words").select("id, category_id, word, phrase, emoji, color, sort_order").order("sort_order")
+        supabaseClient.from("words").select("id, category_id, word, phrase, emoji, color, audio_url, sort_order").order("sort_order")
     ]);
+
+    let words = wordsResult.data;
+    let wordsError = wordsResult.error;
+    if (wordsError) {
+        const fallbackWords = await supabaseClient
+            .from("words")
+            .select("id, category_id, word, phrase, emoji, color, sort_order")
+            .order("sort_order");
+        words = fallbackWords.data;
+        wordsError = fallbackWords.error;
+    }
 
     if (categoriesError || wordsError) {
         const error = categoriesError || wordsError;
@@ -94,6 +106,10 @@ function render() {
         card.append(emoji, label, typeLabel);
         card.addEventListener("click", () => handleItemClick(item));
         cardShell.appendChild(card);
+
+        if (item.type === "word") {
+            cardShell.appendChild(createWordAudioControls(item));
+        }
         grid.appendChild(cardShell);
     });
 
@@ -136,11 +152,114 @@ function handleItemClick(item) {
     if (item.type === "word") {
         state.sentence.push(item);
         updateSpeechDisplay();
+        playWordAudio(item);
         return;
     }
 
     state.path.push(item);
     render();
+}
+
+function createWordAudioControls(item) {
+    const controls = document.createElement("div");
+    controls.className = "word-audio-controls";
+
+    const recordButton = document.createElement("button");
+    recordButton.className = "word-audio-button";
+    recordButton.type = "button";
+    recordButton.textContent = "🎙 NAGRAJ";
+    recordButton.title = "Nagraj wymowę słowa";
+    recordButton.addEventListener("click", (event) => {
+        event.stopPropagation();
+        if (activeRecording?.item.id === item.id) {
+            activeRecording.recorder.stop();
+        } else {
+            startRecording(item, recordButton);
+        }
+    });
+    controls.appendChild(recordButton);
+
+    if (item.audio_url) {
+        const playButton = document.createElement("button");
+        playButton.className = "word-audio-button";
+        playButton.type = "button";
+        playButton.textContent = "▶ ODTWÓRZ";
+        playButton.title = "Odtwórz wymowę słowa";
+        playButton.addEventListener("click", (event) => {
+            event.stopPropagation();
+            playWordAudio(item);
+        });
+        controls.appendChild(playButton);
+    }
+
+    return controls;
+}
+
+async function startRecording(item, recordButton) {
+    if (!navigator.mediaDevices?.getUserMedia) {
+        window.alert("Ta przeglądarka nie obsługuje nagrywania audio.");
+        return;
+    }
+
+    if (activeRecording) {
+        activeRecording.recorder.stop();
+    }
+
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const chunks = [];
+        const recorder = new MediaRecorder(stream);
+        activeRecording = { item, recorder };
+        recordButton.textContent = "■ ZATRZYMAJ";
+
+        recorder.addEventListener("dataavailable", (event) => chunks.push(event.data));
+        recorder.addEventListener("stop", async () => {
+            stream.getTracks().forEach((track) => track.stop());
+            activeRecording = null;
+            recordButton.textContent = "🎙 NAGRAJ";
+            await uploadWordAudio(item, new Blob(chunks, { type: recorder.mimeType || "audio/webm" }));
+        }, { once: true });
+        recorder.start();
+    } catch (error) {
+        console.error("Nie udało się uruchomić mikrofonu:", error);
+        window.alert("Nie udało się uruchomić mikrofonu. Sprawdź uprawnienia przeglądarki.");
+    }
+}
+
+async function uploadWordAudio(item, audioBlob) {
+    const filePath = `words/${item.id}.webm`;
+    const { error: uploadError } = await supabaseClient.storage
+        .from("word-audio")
+        .upload(filePath, audioBlob, { contentType: audioBlob.type, upsert: true });
+
+    if (uploadError) {
+        console.error("Nie udało się wysłać nagrania:", uploadError);
+        window.alert("Nie udało się zapisać nagrania w bazie.");
+        return;
+    }
+
+    const { data: publicUrlData } = supabaseClient.storage.from("word-audio").getPublicUrl(filePath);
+    const audioUrl = publicUrlData.publicUrl;
+    const { error: updateError } = await supabaseClient
+        .from("words")
+        .update({ audio_url: audioUrl })
+        .eq("id", item.id);
+
+    if (updateError) {
+        console.error("Nie udało się zapisać adresu nagrania:", updateError);
+        window.alert("Plik wysłano, ale nie udało się zapisać go przy słowie.");
+        return;
+    }
+
+    const storedWord = state.words.find((word) => word.id === item.id);
+    if (storedWord) storedWord.audio_url = audioUrl;
+    render();
+}
+
+function playWordAudio(item) {
+    if (!item.audio_url) return;
+    const audio = new Audio(item.audio_url);
+    audio.play().catch((error) => console.error("Nie udało się odtworzyć nagrania:", error));
 }
 
 function openCategoryDialog() {
@@ -209,14 +328,36 @@ function clearSentence() {
     updateSpeechDisplay();
 }
 
-function speak() {
+async function speak() {
     if (state.sentence.length === 0) return;
-    const utterance = new SpeechSynthesisUtterance(state.sentence.map((word) => word.name).join(" "));
-    utterance.lang = "pl-PL";
-    utterance.rate = 0.9;
-    utterance.pitch = 1;
     window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
+    for (const word of state.sentence) {
+        if (word.audio_url) {
+            await playAudioAndWait(word.audio_url);
+        } else {
+            await speakTextAndWait(word.name);
+        }
+    }
+}
+
+function playAudioAndWait(url) {
+    return new Promise((resolve) => {
+        const audio = new Audio(url);
+        audio.addEventListener("ended", resolve, { once: true });
+        audio.addEventListener("error", resolve, { once: true });
+        audio.play().catch(resolve);
+    });
+}
+
+function speakTextAndWait(text) {
+    return new Promise((resolve) => {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = "pl-PL";
+        utterance.rate = 0.9;
+        utterance.pitch = 1;
+        utterance.addEventListener("end", resolve, { once: true });
+        window.speechSynthesis.speak(utterance);
+    });
 }
 
 function isLightColor(color) {
