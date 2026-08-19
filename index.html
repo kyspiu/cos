@@ -15,57 +15,26 @@
 
         <main>
             <div class="grid" id="grid"></div>
-            <form class="add-panel" id="addForm">
-                <div class="add-panel-heading">
-                    <div>
-                        <p class="eyebrow">WŁASNE ELEMENTY</p>
-                        <h2>Dodaj do bieżącej kategorii</h2>
-                    </div>
-                    <span class="add-target" id="addTarget">Kategorie główne</span>
-                </div>
-                <div class="add-fields">
+            <dialog class="category-dialog" id="categoryDialog">
+                <form id="categoryForm">
+                    <h2>Nowa kategoria</h2>
                     <label>
                         Nazwa
-                        <input id="itemName" name="name" type="text" maxlength="32" placeholder="np. CHCĘ CZYTAĆ" required>
+                        <input id="categoryName" type="text" maxlength="32" placeholder="np. JEDZENIE" required>
                     </label>
                     <label>
                         Emoji
-                        <input id="itemEmoji" name="emoji" type="text" maxlength="4" placeholder="💬">
-                    </label>
-                    <label>
-                        Typ
-                        <select id="itemType" name="type">
-                            <option value="word">Słowo / komunikat</option>
-                            <option value="category">Podkategoria</option>
-                        </select>
+                        <input id="categoryEmoji" type="text" maxlength="4" placeholder="📁">
                     </label>
                     <label>
                         Kolor
-                        <input id="itemColor" name="color" type="color" value="#0ea5e9">
-                    </label>
-                    <button class="add-btn" type="submit">DODAJ</button>
-                </div>
-                <p class="form-message" id="formMessage" role="status" aria-live="polite"></p>
-            </form>
-            <dialog class="edit-dialog" id="editDialog">
-                <form id="editForm" method="dialog">
-                    <h2>Edytuj element</h2>
-                    <label>
-                        Nazwa
-                        <input id="editName" type="text" maxlength="32" required>
-                    </label>
-                    <label>
-                        Emoji
-                        <input id="editEmoji" type="text" maxlength="4">
-                    </label>
-                    <label>
-                        Kolor
-                        <input id="editColor" type="color">
+                        <input id="categoryColor" type="color" value="#0ea5e9">
                     </label>
                     <div class="dialog-actions">
-                        <button class="dialog-cancel" id="btnCancelEdit" type="button">ANULUJ</button>
-                        <button class="add-btn" type="submit">ZAPISZ</button>
+                        <button class="dialog-cancel" id="btnCancelCategory" type="button">ANULUJ</button>
+                        <button class="add-btn" type="submit">DODAJ</button>
                     </div>
+                    <p class="form-message" id="categoryMessage" role="status" aria-live="polite"></p>
                 </form>
             </dialog>
         </main>
@@ -79,6 +48,7 @@
         </nav>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="app.js"></script>
 </body>
 </html>

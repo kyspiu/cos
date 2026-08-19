@@ -197,6 +197,17 @@ main {
     filter: brightness(1.08);
 }
 
+.card-add-category {
+    background: #f8fafc;
+    border-color: #64748b;
+    color: #0f172a;
+}
+
+.card-add-category .card-emoji {
+    font-size: 3.5rem;
+    font-weight: 400;
+}
+
 .card:active {
     transform: translateY(4px);
     box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
@@ -304,6 +315,49 @@ main {
     color: #0f172a;
     cursor: pointer;
     font-weight: 800;
+}
+
+.category-dialog {
+    width: min(92vw, 420px);
+    padding: 0;
+    border: 0;
+    border-radius: 1rem;
+    background: #f8fafc;
+    color: #0f172a;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+
+.category-dialog::backdrop {
+    background: rgba(2, 6, 23, 0.72);
+}
+
+.category-dialog form {
+    display: grid;
+    gap: 1rem;
+    padding: 1.5rem;
+}
+
+.category-dialog h2 {
+    font-size: 1.4rem;
+}
+
+.category-dialog label {
+    display: grid;
+    gap: 0.35rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.category-dialog input {
+    min-height: 46px;
+    padding: 0.65rem;
+    border: 2px solid #cbd5e1;
+    border-radius: 0.5rem;
+    font: inherit;
+}
+
+.category-dialog input[type="color"] {
+    padding: 0.25rem;
 }
 
 .actions {
