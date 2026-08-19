@@ -28,7 +28,12 @@
                     </label>
                     <label>
                         Kolor
-                        <input id="categoryColor" type="color" value="#0ea5e9">
+                        <input id="categoryColor" type="hidden" value="#86b88a">
+                        <div class="color-palette" id="categoryPalette" aria-label="Wybierz kolor kategorii"></div>
+                    </label>
+                    <label class="checkbox-label">
+                        <input id="categorySpeak" type="checkbox" checked>
+                        Czytaj tę kategorię w POWIEDZ
                     </label>
                     <div class="dialog-actions">
                         <button class="dialog-cancel" id="btnCancelCategory" type="button">ANULUJ</button>
@@ -37,13 +42,62 @@
                     <p class="form-message" id="categoryMessage" role="status" aria-live="polite"></p>
                 </form>
             </dialog>
+            <dialog class="category-dialog" id="wordDialog">
+                <form id="wordForm">
+                    <h2>Nowe słowo</h2>
+                    <label>
+                        Słowo lub fraza
+                        <input id="wordName" type="text" maxlength="64" placeholder="np. JESTEM GŁODNY" required>
+                    </label>
+                    <label>
+                        Emoji
+                        <input id="wordEmoji" type="text" maxlength="4" placeholder="💬">
+                    </label>
+                    <label>
+                        Kolor
+                        <input id="wordColor" type="hidden" value="#86b88a">
+                        <div class="color-palette" id="wordPalette" aria-label="Wybierz kolor słowa"></div>
+                    </label>
+                    <div class="dialog-actions">
+                        <button class="dialog-cancel" id="btnCancelWord" type="button">ANULUJ</button>
+                        <button class="add-btn" type="submit">DODAJ</button>
+                    </div>
+                    <p class="form-message" id="wordMessage" role="status" aria-live="polite"></p>
+                </form>
+            </dialog>
+            <dialog class="category-dialog" id="editDialog">
+                <form id="editForm">
+                    <h2>Edytuj element</h2>
+                    <label>
+                        Nazwa
+                        <input id="editName" type="text" maxlength="64" required>
+                    </label>
+                    <label>
+                        Emoji
+                        <input id="editEmoji" type="text" maxlength="4">
+                    </label>
+                    <label>
+                        Kolor
+                        <input id="editColor" type="hidden">
+                        <div class="color-palette" id="editPalette" aria-label="Wybierz kolor"></div>
+                    </label>
+                    <label class="checkbox-label" id="editSpeakRow">
+                        <input id="editSpeak" type="checkbox">
+                        Czytaj w POWIEDZ
+                    </label>
+                    <div class="dialog-actions">
+                        <button class="dialog-cancel" id="btnCancelEdit" type="button">ANULUJ</button>
+                        <button class="add-btn" type="submit">ZAPISZ</button>
+                    </div>
+                    <p class="form-message" id="editMessage" role="status" aria-live="polite"></p>
+                </form>
+            </dialog>
         </main>
 
         <nav class="actions">
-            <button id="btnStart" class="action-btn" type="button">START</button>
+            <button id="btnStart" class="action-btn" type="button">ZACZNIJ OD NOWA</button>
             <button id="btnBack" class="action-btn" type="button">COFNIJ</button>
             <button id="btnDelete" class="action-btn" type="button">USUŃ</button>
-            <button id="btnClear" class="action-btn" type="button">WYCZYŚĆ</button>
             <button id="btnSpeak" class="action-btn speak" type="button">POWIEDZ</button>
         </nav>
     </div>

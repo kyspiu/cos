@@ -25,8 +25,58 @@ const categoryForm = document.getElementById("categoryForm");
 const categoryName = document.getElementById("categoryName");
 const categoryEmoji = document.getElementById("categoryEmoji");
 const categoryColor = document.getElementById("categoryColor");
+const categorySpeak = document.getElementById("categorySpeak");
+const categoryPalette = document.getElementById("categoryPalette");
 const categoryMessage = document.getElementById("categoryMessage");
+const editDialog = document.getElementById("editDialog");
+const editForm = document.getElementById("editForm");
+const editName = document.getElementById("editName");
+const editEmoji = document.getElementById("editEmoji");
+const editColor = document.getElementById("editColor");
+const editPalette = document.getElementById("editPalette");
+const editSpeak = document.getElementById("editSpeak");
+const editSpeakRow = document.getElementById("editSpeakRow");
+const editMessage = document.getElementById("editMessage");
+let itemBeingEdited = null;
+const wordDialog = document.getElementById("wordDialog");
+const wordForm = document.getElementById("wordForm");
+const wordName = document.getElementById("wordName");
+const wordEmoji = document.getElementById("wordEmoji");
+const wordColor = document.getElementById("wordColor");
+const wordPalette = document.getElementById("wordPalette");
+const wordMessage = document.getElementById("wordMessage");
 let activeRecording = null;
+
+const paletteColors = [
+    "#d96c6c", "#e59a62", "#e5c466", "#b7c96f", "#86b88a",
+    "#65b7a6", "#69b6c9", "#76a9d8", "#8797d5", "#a88fce",
+    "#c58fc1", "#d88eaa", "#d99b9b", "#b79b87", "#9b9b8d",
+    "#78909c", "#536d7a", "#8ca68f", "#a9a07e", "#c49a70"
+];
+
+function setupColorPalette(container, input) {
+    paletteColors.forEach((color) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "color-swatch";
+        button.style.backgroundColor = color;
+        button.title = color;
+        button.setAttribute("aria-label", `Kolor ${color}`);
+        button.addEventListener("click", () => {
+            input.value = color;
+            container.querySelectorAll(".color-swatch").forEach((swatch) => swatch.classList.remove("selected"));
+            button.classList.add("selected");
+        });
+        container.appendChild(button);
+    });
+}
+
+function setPaletteValue(container, input, color) {
+    input.value = color || paletteColors[4];
+    container.querySelectorAll(".color-swatch").forEach((swatch) => {
+        swatch.classList.toggle("selected", swatch.style.backgroundColor === input.value);
+    });
+}
 
 function getCurrentCategory() {
     return state.path[state.path.length - 1];
@@ -34,7 +84,7 @@ function getCurrentCategory() {
 
 async function loadData() {
     const [categoriesResult, wordsResult] = await Promise.all([
-        supabaseClient.from("categories").select("id, name, emoji, color, audio_url, parent_id, sort_order").order("sort_order"),
+        supabaseClient.from("categories").select("id, name, emoji, color, audio_url, speak_enabled, parent_id, sort_order").order("sort_order"),
         supabaseClient.from("words").select("id, category_id, word, phrase, emoji, color, audio_url, sort_order").order("sort_order")
     ]);
 
@@ -97,9 +147,10 @@ function render() {
 
         const card = document.createElement("button");
         card.className = `card card-${item.type}`;
-        card.style.backgroundColor = item.color || "#0ea5e9";
-        card.style.borderColor = shadeColor(item.color || "#0ea5e9", -20);
-        card.style.color = isLightColor(item.color || "#0ea5e9") ? "#111827" : "#ffffff";
+        const itemColor = item.color || "#86b88a";
+        card.style.backgroundColor = item.type === "category" || item.type === "word" ? "#fffdf7" : itemColor;
+        card.style.borderColor = itemColor;
+        card.style.color = "#26352d";
         card.type = "button";
 
         const emoji = document.createElement("span");
@@ -109,23 +160,32 @@ function render() {
         const label = document.createElement("span");
         label.className = "card-label";
         label.textContent = item.name;
+        label.classList.toggle("single-word", !/\s/.test(item.name));
 
         const typeLabel = document.createElement("span");
         typeLabel.className = "card-type";
         typeLabel.textContent = item.type === "category" ? "KATEGORIA" : "SŁOWO";
 
-        card.append(emoji, label, typeLabel);
+        const speechMode = document.createElement("span");
+        speechMode.className = "speech-mode";
+        speechMode.textContent = item.type === "category" && item.speak_enabled === false ? "🔇" : "🎙";
+        speechMode.title = item.type === "category" && item.speak_enabled === false
+            ? "Pomijana przez POWIEDZ"
+            : "Czytana przez POWIEDZ";
+
+        card.append(emoji, label, typeLabel, speechMode);
         card.addEventListener("click", () => handleItemClick(item));
         cardShell.appendChild(card);
 
         cardShell.appendChild(createAudioControls(item));
         grid.appendChild(cardShell);
+        fitCardLabel(label);
     });
 
     if (items.length === 0) {
         const emptyState = document.createElement("p");
         emptyState.className = "empty-state";
-        emptyState.textContent = "Ta kategoria jest pusta.";
+        emptyState.textContent = "Ta kategoria jest pusta. Użyj +, aby dodać podkategorię.";
         grid.appendChild(emptyState);
     }
 
@@ -143,6 +203,20 @@ function render() {
     addCategoryShell.appendChild(emptyAudioControls);
     grid.appendChild(addCategoryShell);
 
+    const addWordShell = document.createElement("div");
+    addWordShell.className = "card-shell";
+    const addWordButton = document.createElement("button");
+    addWordButton.className = "card card-add-word";
+    addWordButton.type = "button";
+    addWordButton.innerHTML = "<span class=\"card-emoji\">💬</span><span class=\"card-label\">NOWE SŁOWO</span><span class=\"card-type\">DODAJ</span>";
+    addWordButton.addEventListener("click", openWordDialog);
+    addWordShell.appendChild(addWordButton);
+    const emptyWordControls = document.createElement("div");
+    emptyWordControls.className = "audio-controls audio-controls-placeholder";
+    emptyWordControls.setAttribute("aria-hidden", "true");
+    addWordShell.appendChild(emptyWordControls);
+    grid.appendChild(addWordShell);
+
     updatePathText();
     updateSpeechDisplay();
 }
@@ -155,24 +229,55 @@ function updatePathText() {
     categoryPath.textContent = "Jesteś w: " + state.path.slice(1).map((category) => category.name).join(" → ");
 }
 
+function fitCardLabel(label) {
+    if (!label.classList.contains("single-word")) return;
+
+    let fontSize = parseFloat(getComputedStyle(label).fontSize);
+    while (label.scrollWidth > label.clientWidth && fontSize > 12) {
+        fontSize -= 1;
+        label.style.fontSize = `${fontSize}px`;
+    }
+}
+
 function updateSpeechDisplay() {
-    if (state.sentence.length > 0) {
-        speechDisplay.textContent = state.sentence.map((word) => word.name).join(" ");
-    } else if (state.path.length > 1) {
-        speechDisplay.textContent = getCurrentCategory().name;
-    } else {
+    speechDisplay.replaceChildren();
+
+    if (state.path.length > 1) {
+        state.path.slice(1).forEach((category) => {
+            const categoryElement = document.createElement("span");
+            categoryElement.className = "speech-word speech-category";
+            categoryElement.textContent = category.name;
+            speechDisplay.appendChild(categoryElement);
+        });
+    }
+
+    state.sentence.forEach((word) => {
+        const wordElement = document.createElement("span");
+        wordElement.className = "speech-word";
+        wordElement.textContent = word.name;
+        speechDisplay.appendChild(wordElement);
+    });
+
+    if (speechDisplay.childElementCount === 0) {
         speechDisplay.textContent = "—";
     }
 }
 
 function handleItemClick(item) {
     if (item.type === "word") {
-        state.sentence.push(item);
+        state.sentence.push({ ...item, selectedCategoryId: getCurrentCategory().id });
         updateSpeechDisplay();
-        playItemAudio(item);
+        playItemAudio(item).then((played) => {
+            if (!played) speakTextAndWait(item.name);
+        });
         return;
     }
 
+    if (item.speak_enabled !== false) {
+        playItemAudio(item).then((played) => {
+            if (!played) speakTextAndWait(item.name);
+        });
+    }
     state.path.push(item);
     render();
 }
@@ -181,33 +286,16 @@ function createAudioControls(item) {
     const controls = document.createElement("div");
     controls.className = "audio-controls";
 
-    const recordButton = document.createElement("button");
-    recordButton.className = "audio-button";
-    recordButton.type = "button";
-    recordButton.textContent = "🎙 NAGRAJ";
-    recordButton.title = `Nagraj wymowę: ${item.name}`;
-    recordButton.addEventListener("click", (event) => {
+    const editButton = document.createElement("button");
+    editButton.className = "audio-button edit-item-button";
+    editButton.type = "button";
+    editButton.textContent = "✎ EDYTUJ";
+    editButton.title = `Edytuj: ${item.name}`;
+    editButton.addEventListener("click", (event) => {
         event.stopPropagation();
-        if (activeRecording?.item.id === item.id) {
-            activeRecording.recorder.stop();
-        } else {
-            startRecording(item, recordButton);
-        }
+        openEditDialog(item);
     });
-    controls.appendChild(recordButton);
-
-    if (item.audio_url) {
-        const playButton = document.createElement("button");
-        playButton.className = "audio-button";
-        playButton.type = "button";
-        playButton.textContent = "▶ ODTWÓRZ";
-        playButton.title = `Odtwórz wymowę: ${item.name}`;
-        playButton.addEventListener("click", (event) => {
-            event.stopPropagation();
-            playItemAudio(item);
-        });
-        controls.appendChild(playButton);
-    }
+    controls.appendChild(editButton);
 
     if (item.type === "category") {
         const deleteButton = document.createElement("button");
@@ -220,9 +308,76 @@ function createAudioControls(item) {
             deleteCategory(item);
         });
         controls.appendChild(deleteButton);
+    } else {
+        const deleteButton = document.createElement("button");
+        deleteButton.className = "audio-button delete-category-button";
+        deleteButton.type = "button";
+        deleteButton.textContent = "× USUŃ";
+        deleteButton.title = `Usuń słowo ${item.name}`;
+        deleteButton.addEventListener("click", (event) => {
+            event.stopPropagation();
+            deleteWord(item);
+        });
+        controls.appendChild(deleteButton);
     }
 
     return controls;
+}
+
+function openEditDialog(item) {
+    itemBeingEdited = item;
+    editName.value = item.name;
+    editEmoji.value = item.emoji || "";
+    setPaletteValue(editPalette, editColor, item.color || "#86b88a");
+    editSpeakRow.hidden = item.type !== "category";
+    editSpeak.checked = item.speak_enabled !== false;
+    editMessage.textContent = "";
+    editDialog.showModal();
+    editName.focus();
+}
+
+function closeEditDialog() {
+    itemBeingEdited = null;
+    editDialog.close();
+}
+
+async function saveEditedItem(event) {
+    event.preventDefault();
+    if (!itemBeingEdited || !editName.value.trim()) return;
+
+    const table = itemBeingEdited.type === "category" ? "categories" : "words";
+    const displayName = editName.value.trim().toUpperCase();
+    const changes = {
+        emoji: editEmoji.value.trim() || (table === "categories" ? "📁" : "💬"),
+        color: editColor.value
+    };
+    if (table === "categories") {
+        changes.name = displayName;
+        changes.speak_enabled = editSpeak.checked;
+    } else {
+        changes.word = displayName;
+    }
+
+    const { error } = await supabaseClient
+        .from(table)
+        .update(changes)
+        .eq("id", itemBeingEdited.id);
+
+    if (error) {
+        console.error("Nie udało się edytować elementu:", error);
+        editMessage.textContent = `Nie udało się zapisać: ${error.message}`;
+        return;
+    }
+
+    const storedItem = itemBeingEdited.type === "category"
+        ? state.categories.find((category) => category.id === itemBeingEdited.id)
+        : state.words.find((word) => word.id === itemBeingEdited.id);
+    if (storedItem) {
+        Object.assign(storedItem, changes);
+        if (itemBeingEdited.type === "word") storedItem.word = changes.word;
+    }
+    closeEditDialog();
+    render();
 }
 
 async function startRecording(item, recordButton) {
@@ -308,15 +463,41 @@ async function deleteCategory(category) {
     render();
 }
 
-function playItemAudio(item) {
-    if (!item.audio_url) return;
+async function deleteWord(word) {
+    if (!window.confirm(`Usunąć słowo „${word.name}”?`)) return;
+
+    const { error } = await supabaseClient
+        .from("words")
+        .delete()
+        .eq("id", word.id);
+
+    if (error) {
+        console.error("Nie udało się usunąć słowa:", error);
+        window.alert("Nie udało się usunąć słowa z bazy.");
+        return;
+    }
+
+    state.words = state.words.filter((item) => item.id !== word.id);
+    state.sentence = state.sentence.filter((item) => item.id !== word.id);
+    render();
+}
+
+async function playItemAudio(item) {
+    if (!item.audio_url) return false;
     const audio = new Audio(item.audio_url);
-    audio.play().catch((error) => console.error("Nie udało się odtworzyć nagrania:", error));
+    try {
+        await audio.play();
+        return true;
+    } catch (error) {
+        console.error("Nie udało się odtworzyć nagrania:", error);
+        return false;
+    }
 }
 
 function openCategoryDialog() {
     categoryForm.reset();
-    categoryColor.value = "#0ea5e9";
+    setPaletteValue(categoryPalette, categoryColor, "#86b88a");
+    categorySpeak.checked = true;
     categoryMessage.textContent = "";
     categoryDialog.showModal();
     categoryName.focus();
@@ -324,6 +505,52 @@ function openCategoryDialog() {
 
 function closeCategoryDialog() {
     categoryDialog.close();
+}
+
+function openWordDialog() {
+    wordForm.reset();
+    setPaletteValue(wordPalette, wordColor, "#86b88a");
+    wordMessage.textContent = "";
+    wordDialog.showModal();
+    wordName.focus();
+}
+
+function closeWordDialog() {
+    wordDialog.close();
+}
+
+async function createWord(event) {
+    event.preventDefault();
+    const name = wordName.value.trim();
+    const categoryId = getCurrentCategory().id;
+    if (!name || categoryId === null) {
+        wordMessage.textContent = "Wejdź do kategorii, aby dodać słowo.";
+        return;
+    }
+
+    const siblingWords = state.words.filter((word) => word.category_id === categoryId);
+    const { data: newWord, error } = await supabaseClient
+        .from("words")
+        .insert({
+            category_id: categoryId,
+            word: name.toUpperCase(),
+            phrase: null,
+            emoji: wordEmoji.value.trim() || "💬",
+            color: wordColor.value,
+            sort_order: siblingWords.length + 1
+        })
+        .select("id, category_id, word, phrase, emoji, color, audio_url, sort_order")
+        .single();
+
+    if (error) {
+        console.error("Nie udało się dodać słowa:", error);
+        wordMessage.textContent = `Nie udało się zapisać: ${error.message}`;
+        return;
+    }
+
+    state.words.push(newWord);
+    closeWordDialog();
+    render();
 }
 
 async function createCategory(event) {
@@ -339,15 +566,16 @@ async function createCategory(event) {
             name: name.toUpperCase(),
             emoji: categoryEmoji.value.trim() || "📁",
             color: categoryColor.value,
+            speak_enabled: categorySpeak.checked,
             parent_id: parentId,
             sort_order: siblingCategories.length + 1
         })
-        .select("id, name, emoji, color, parent_id, sort_order")
+        .select("id, name, emoji, color, audio_url, speak_enabled, parent_id, sort_order")
         .single();
 
     if (error) {
         console.error("Nie udało się dodać kategorii:", error);
-        categoryMessage.textContent = "Nie udało się zapisać kategorii w bazie.";
+        categoryMessage.textContent = `Nie udało się zapisać: ${error.message}`;
         return;
     }
 
@@ -358,11 +586,14 @@ async function createCategory(event) {
 
 function goToStart() {
     state.path = [rootCategory];
+    state.sentence = [];
     render();
 }
 
 function goBack() {
     if (state.path.length > 1) {
+        const leavingCategory = getCurrentCategory();
+        state.sentence = state.sentence.filter((word) => word.selectedCategoryId !== leavingCategory.id);
         state.path.pop();
         render();
     }
@@ -375,19 +606,17 @@ function deleteLastWord() {
     }
 }
 
-function clearSentence() {
-    state.sentence = [];
-    updateSpeechDisplay();
-}
-
 async function speak() {
-    if (state.sentence.length === 0) return;
+    const speechItems = [
+        ...state.path.slice(1).filter((category) => category.speak_enabled !== false),
+        ...state.sentence
+    ];
+    if (speechItems.length === 0) return;
     window.speechSynthesis.cancel();
-    for (const word of state.sentence) {
-        if (word.audio_url) {
-            await playAudioAndWait(word.audio_url);
-        } else {
-            await speakTextAndWait(word.name);
+    for (const item of speechItems) {
+        const played = item.audio_url && await playAudioAndWait(item.audio_url);
+        if (!played) {
+            await speakTextAndWait(item.name);
         }
     }
 }
@@ -395,9 +624,9 @@ async function speak() {
 function playAudioAndWait(url) {
     return new Promise((resolve) => {
         const audio = new Audio(url);
-        audio.addEventListener("ended", resolve, { once: true });
-        audio.addEventListener("error", resolve, { once: true });
-        audio.play().catch(resolve);
+        audio.addEventListener("ended", () => resolve(true), { once: true });
+        audio.addEventListener("error", () => resolve(false), { once: true });
+        audio.play().catch(() => resolve(false));
     });
 }
 
@@ -434,9 +663,18 @@ function shadeColor(color, percent) {
 document.getElementById("btnStart").addEventListener("click", goToStart);
 document.getElementById("btnBack").addEventListener("click", goBack);
 document.getElementById("btnDelete").addEventListener("click", deleteLastWord);
-document.getElementById("btnClear").addEventListener("click", clearSentence);
 document.getElementById("btnSpeak").addEventListener("click", speak);
 categoryForm.addEventListener("submit", createCategory);
 document.getElementById("btnCancelCategory").addEventListener("click", closeCategoryDialog);
+wordForm.addEventListener("submit", createWord);
+document.getElementById("btnCancelWord").addEventListener("click", closeWordDialog);
+editForm.addEventListener("submit", saveEditedItem);
+document.getElementById("btnCancelEdit").addEventListener("click", closeEditDialog);
+
+setupColorPalette(categoryPalette, categoryColor);
+setupColorPalette(wordPalette, wordColor);
+setupColorPalette(editPalette, editColor);
+setPaletteValue(categoryPalette, categoryColor, "#86b88a");
+setPaletteValue(wordPalette, wordColor, "#86b88a");
 
 loadData();
