@@ -33,10 +33,21 @@ function getCurrentCategory() {
 }
 
 async function loadData() {
-    const [{ data: categories, error: categoriesError }, wordsResult] = await Promise.all([
-        supabaseClient.from("categories").select("id, name, emoji, color, parent_id, sort_order").order("sort_order"),
+    const [categoriesResult, wordsResult] = await Promise.all([
+        supabaseClient.from("categories").select("id, name, emoji, color, audio_url, parent_id, sort_order").order("sort_order"),
         supabaseClient.from("words").select("id, category_id, word, phrase, emoji, color, audio_url, sort_order").order("sort_order")
     ]);
+
+    let categories = categoriesResult.data;
+    let categoriesError = categoriesResult.error;
+    if (categoriesError) {
+        const fallbackCategories = await supabaseClient
+            .from("categories")
+            .select("id, name, emoji, color, parent_id, sort_order")
+            .order("sort_order");
+        categories = fallbackCategories.data;
+        categoriesError = fallbackCategories.error;
+    }
 
     let words = wordsResult.data;
     let wordsError = wordsResult.error;
@@ -107,9 +118,7 @@ function render() {
         card.addEventListener("click", () => handleItemClick(item));
         cardShell.appendChild(card);
 
-        if (item.type === "word") {
-            cardShell.appendChild(createWordAudioControls(item));
-        }
+        cardShell.appendChild(createAudioControls(item));
         grid.appendChild(cardShell);
     });
 
@@ -128,6 +137,10 @@ function render() {
     addCategoryButton.innerHTML = "<span class=\"card-emoji\">+</span><span class=\"card-label\">NOWA KATEGORIA</span><span class=\"card-type\">DODAJ</span>";
     addCategoryButton.addEventListener("click", openCategoryDialog);
     addCategoryShell.appendChild(addCategoryButton);
+    const emptyAudioControls = document.createElement("div");
+    emptyAudioControls.className = "audio-controls audio-controls-placeholder";
+    emptyAudioControls.setAttribute("aria-hidden", "true");
+    addCategoryShell.appendChild(emptyAudioControls);
     grid.appendChild(addCategoryShell);
 
     updatePathText();
@@ -143,16 +156,20 @@ function updatePathText() {
 }
 
 function updateSpeechDisplay() {
-    speechDisplay.textContent = state.sentence.length === 0
-        ? "—"
-        : state.sentence.map((word) => word.name).join(" ");
+    if (state.sentence.length > 0) {
+        speechDisplay.textContent = state.sentence.map((word) => word.name).join(" ");
+    } else if (state.path.length > 1) {
+        speechDisplay.textContent = getCurrentCategory().name;
+    } else {
+        speechDisplay.textContent = "—";
+    }
 }
 
 function handleItemClick(item) {
     if (item.type === "word") {
         state.sentence.push(item);
         updateSpeechDisplay();
-        playWordAudio(item);
+        playItemAudio(item);
         return;
     }
 
@@ -160,15 +177,15 @@ function handleItemClick(item) {
     render();
 }
 
-function createWordAudioControls(item) {
+function createAudioControls(item) {
     const controls = document.createElement("div");
-    controls.className = "word-audio-controls";
+    controls.className = "audio-controls";
 
     const recordButton = document.createElement("button");
-    recordButton.className = "word-audio-button";
+    recordButton.className = "audio-button";
     recordButton.type = "button";
     recordButton.textContent = "🎙 NAGRAJ";
-    recordButton.title = "Nagraj wymowę słowa";
+    recordButton.title = `Nagraj wymowę: ${item.name}`;
     recordButton.addEventListener("click", (event) => {
         event.stopPropagation();
         if (activeRecording?.item.id === item.id) {
@@ -181,15 +198,28 @@ function createWordAudioControls(item) {
 
     if (item.audio_url) {
         const playButton = document.createElement("button");
-        playButton.className = "word-audio-button";
+        playButton.className = "audio-button";
         playButton.type = "button";
         playButton.textContent = "▶ ODTWÓRZ";
-        playButton.title = "Odtwórz wymowę słowa";
+        playButton.title = `Odtwórz wymowę: ${item.name}`;
         playButton.addEventListener("click", (event) => {
             event.stopPropagation();
-            playWordAudio(item);
+            playItemAudio(item);
         });
         controls.appendChild(playButton);
+    }
+
+    if (item.type === "category") {
+        const deleteButton = document.createElement("button");
+        deleteButton.className = "audio-button delete-category-button";
+        deleteButton.type = "button";
+        deleteButton.textContent = "× USUŃ";
+        deleteButton.title = `Usuń kategorię ${item.name}`;
+        deleteButton.addEventListener("click", (event) => {
+            event.stopPropagation();
+            deleteCategory(item);
+        });
+        controls.appendChild(deleteButton);
     }
 
     return controls;
@@ -217,7 +247,7 @@ async function startRecording(item, recordButton) {
             stream.getTracks().forEach((track) => track.stop());
             activeRecording = null;
             recordButton.textContent = "🎙 NAGRAJ";
-            await uploadWordAudio(item, new Blob(chunks, { type: recorder.mimeType || "audio/webm" }));
+            await uploadItemAudio(item, new Blob(chunks, { type: recorder.mimeType || "audio/webm" }));
         }, { once: true });
         recorder.start();
     } catch (error) {
@@ -226,8 +256,9 @@ async function startRecording(item, recordButton) {
     }
 }
 
-async function uploadWordAudio(item, audioBlob) {
-    const filePath = `words/${item.id}.webm`;
+async function uploadItemAudio(item, audioBlob) {
+    const table = item.type === "category" ? "categories" : "words";
+    const filePath = `${table}/${item.id}.webm`;
     const { error: uploadError } = await supabaseClient.storage
         .from("word-audio")
         .upload(filePath, audioBlob, { contentType: audioBlob.type, upsert: true });
@@ -241,7 +272,7 @@ async function uploadWordAudio(item, audioBlob) {
     const { data: publicUrlData } = supabaseClient.storage.from("word-audio").getPublicUrl(filePath);
     const audioUrl = publicUrlData.publicUrl;
     const { error: updateError } = await supabaseClient
-        .from("words")
+        .from(table)
         .update({ audio_url: audioUrl })
         .eq("id", item.id);
 
@@ -251,12 +282,33 @@ async function uploadWordAudio(item, audioBlob) {
         return;
     }
 
-    const storedWord = state.words.find((word) => word.id === item.id);
-    if (storedWord) storedWord.audio_url = audioUrl;
+    const storedItem = item.type === "category"
+        ? state.categories.find((category) => category.id === item.id)
+        : state.words.find((word) => word.id === item.id);
+    if (storedItem) storedItem.audio_url = audioUrl;
     render();
 }
 
-function playWordAudio(item) {
+async function deleteCategory(category) {
+    if (!window.confirm(`Usunąć kategorię „${category.name}” wraz z jej zawartością?`)) return;
+
+    const { error } = await supabaseClient
+        .from("categories")
+        .delete()
+        .eq("id", category.id);
+
+    if (error) {
+        console.error("Nie udało się usunąć kategorii:", error);
+        window.alert("Nie udało się usunąć kategorii z bazy.");
+        return;
+    }
+
+    state.categories = state.categories.filter((item) => item.id !== category.id);
+    state.words = state.words.filter((word) => word.category_id !== category.id);
+    render();
+}
+
+function playItemAudio(item) {
     if (!item.audio_url) return;
     const audio = new Audio(item.audio_url);
     audio.play().catch((error) => console.error("Nie udało się odtworzyć nagrania:", error));
