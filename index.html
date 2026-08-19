@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Komunikator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="speech-display" id="speechDisplay" aria-live="polite">—</div>
+            <div class="category-path" id="categoryPath">Kategorie główne</div>
+        </header>
+
+        <main>
+            <div class="grid" id="grid"></div>
+            <form class="add-panel" id="addForm">
+                <div class="add-panel-heading">
+                    <div>
+                        <p class="eyebrow">WŁASNE ELEMENTY</p>
+                        <h2>Dodaj do bieżącej kategorii</h2>
+                    </div>
+                    <span class="add-target" id="addTarget">Kategorie główne</span>
+                </div>
+                <div class="add-fields">
+                    <label>
+                        Nazwa
+                        <input id="itemName" name="name" type="text" maxlength="32" placeholder="np. CHCĘ CZYTAĆ" required>
+                    </label>
+                    <label>
+                        Emoji
+                        <input id="itemEmoji" name="emoji" type="text" maxlength="4" placeholder="💬">
+                    </label>
+                    <label>
+                        Typ
+                        <select id="itemType" name="type">
+                            <option value="word">Słowo / komunikat</option>
+                            <option value="category">Podkategoria</option>
+                        </select>
+                    </label>
+                    <label>
+                        Kolor
+                        <input id="itemColor" name="color" type="color" value="#0ea5e9">
+                    </label>
+                    <button class="add-btn" type="submit">DODAJ</button>
+                </div>
+                <p class="form-message" id="formMessage" role="status" aria-live="polite"></p>
+            </form>
+            <dialog class="edit-dialog" id="editDialog">
+                <form id="editForm" method="dialog">
+                    <h2>Edytuj element</h2>
+                    <label>
+                        Nazwa
+                        <input id="editName" type="text" maxlength="32" required>
+                    </label>
+                    <label>
+                        Emoji
+                        <input id="editEmoji" type="text" maxlength="4">
+                    </label>
+                    <label>
+                        Kolor
+                        <input id="editColor" type="color">
+                    </label>
+                    <div class="dialog-actions">
+                        <button class="dialog-cancel" id="btnCancelEdit" type="button">ANULUJ</button>
+                        <button class="add-btn" type="submit">ZAPISZ</button>
+                    </div>
+                </form>
+            </dialog>
+        </main>
+
+        <nav class="actions">
+            <button id="btnStart" class="action-btn" type="button">START</button>
+            <button id="btnBack" class="action-btn" type="button">COFNIJ</button>
+            <button id="btnDelete" class="action-btn" type="button">USUŃ</button>
+            <button id="btnClear" class="action-btn" type="button">WYCZYŚĆ</button>
+            <button id="btnSpeak" class="action-btn speak" type="button">POWIEDZ</button>
+        </nav>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+ 
