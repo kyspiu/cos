@@ -286,6 +286,33 @@ function createAudioControls(item) {
     const controls = document.createElement("div");
     controls.className = "audio-controls";
 
+    const recordButton = document.createElement("button");
+    recordButton.className = "audio-button record-audio-button";
+    recordButton.type = "button";
+    recordButton.textContent = "🎙 NAGRAJ";
+    recordButton.title = `Nagraj własną wymowę: ${item.name}`;
+    recordButton.addEventListener("click", (event) => {
+        event.stopPropagation();
+        if (activeRecording?.item.id === item.id) {
+            activeRecording.recorder.stop();
+            return;
+        }
+        startRecording(item, recordButton);
+    });
+    controls.appendChild(recordButton);
+
+    const playButton = document.createElement("button");
+    playButton.className = "audio-button play-audio-button";
+    playButton.type = "button";
+    playButton.textContent = "▶ ODSŁUCHAJ";
+    playButton.title = `Odsłuchaj nagranie: ${item.name}`;
+    playButton.disabled = !item.audio_url;
+    playButton.addEventListener("click", (event) => {
+        event.stopPropagation();
+        playItemAudio(item);
+    });
+    controls.appendChild(playButton);
+
     const editButton = document.createElement("button");
     editButton.className = "audio-button edit-item-button";
     editButton.type = "button";
@@ -381,7 +408,7 @@ async function saveEditedItem(event) {
 }
 
 async function startRecording(item, recordButton) {
-    if (!navigator.mediaDevices?.getUserMedia) {
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
         window.alert("Ta przeglądarka nie obsługuje nagrywania audio.");
         return;
     }

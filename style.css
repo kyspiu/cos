@@ -339,6 +339,11 @@ main {
     border-color: var(--ui-sage-dark);
 }
 
+.audio-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
 .edit-item-button:only-child {
     grid-column: 1 / -1;
 }
