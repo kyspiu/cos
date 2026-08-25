@@ -45,6 +45,10 @@ const wordEmoji = document.getElementById("wordEmoji");
 const wordColor = document.getElementById("wordColor");
 const wordPalette = document.getElementById("wordPalette");
 const wordMessage = document.getElementById("wordMessage");
+const settingsDialog = document.getElementById("settingsDialog");
+const settingsForm = document.getElementById("settingsForm");
+const uiScale = document.getElementById("uiScale");
+const uiScaleValue = document.getElementById("uiScaleValue");
 let activeRecording = null;
 
 const paletteColors = [
@@ -202,6 +206,7 @@ function render() {
     emptyAudioControls.setAttribute("aria-hidden", "true");
     addCategoryShell.appendChild(emptyAudioControls);
     grid.appendChild(addCategoryShell);
+    fitCardLabel(addCategoryButton.querySelector(".card-label"));
 
     const addWordShell = document.createElement("div");
     addWordShell.className = "card-shell";
@@ -216,6 +221,7 @@ function render() {
     emptyWordControls.setAttribute("aria-hidden", "true");
     addWordShell.appendChild(emptyWordControls);
     grid.appendChild(addWordShell);
+    fitCardLabel(addWordButton.querySelector(".card-label"));
 
     updatePathText();
     updateSpeechDisplay();
@@ -230,13 +236,42 @@ function updatePathText() {
 }
 
 function fitCardLabel(label) {
-    if (!label.classList.contains("single-word")) return;
+    if (!label) return;
+    const card = label.closest(".card");
+    if (!card) return;
+
+    label.style.fontSize = "";
+    card.style.padding = "";
+    card.style.gap = "";
+    const emoji = card.querySelector(".card-emoji");
+    if (emoji) emoji.style.fontSize = "";
 
     let fontSize = parseFloat(getComputedStyle(label).fontSize);
-    while (label.scrollWidth > label.clientWidth && fontSize > 12) {
+    while (card && (label.scrollWidth > label.clientWidth || card.scrollHeight > card.clientHeight) && fontSize > 8) {
         fontSize -= 1;
         label.style.fontSize = `${fontSize}px`;
     }
+
+    let padding = parseFloat(getComputedStyle(card).paddingTop);
+    let gap = parseFloat(getComputedStyle(card).gap);
+    while (card.scrollHeight > card.clientHeight && (padding > 2 || gap > 0)) {
+        padding = Math.max(2, padding - 1);
+        gap = Math.max(0, gap - 1);
+        card.style.padding = `${padding}px`;
+        card.style.gap = `${gap}px`;
+    }
+
+    if (emoji) {
+        let emojiSize = parseFloat(getComputedStyle(emoji).fontSize);
+        while (card.scrollHeight > card.clientHeight && emojiSize > 14) {
+            emojiSize -= 1;
+            emoji.style.fontSize = `${emojiSize}px`;
+        }
+    }
+}
+
+function fitAllCardLabels() {
+    document.querySelectorAll(".card-label").forEach(fitCardLabel);
 }
 
 function updateSpeechDisplay() {
@@ -687,10 +722,39 @@ function shadeColor(color, percent) {
     return "#" + ((1 << 24) + (red << 16) + (green << 8) + blue).toString(16).slice(1);
 }
 
+function applyUiScale(value) {
+    const scale = Number(value) / 100;
+    document.documentElement.style.setProperty("--ui-scale", scale);
+    uiScale.value = value;
+    uiScaleValue.value = `${value}%`;
+    uiScaleValue.textContent = `${value}%`;
+    requestAnimationFrame(fitAllCardLabels);
+}
+
+function openSettings() {
+    uiScale.value = localStorage.getItem("uiScale") || "100";
+    applyUiScale(uiScale.value);
+    settingsDialog.showModal();
+}
+
+function closeSettings() {
+    settingsDialog.close();
+}
+
+function saveSettings(event) {
+    event.preventDefault();
+    localStorage.setItem("uiScale", uiScale.value);
+    closeSettings();
+}
+
 document.getElementById("btnStart").addEventListener("click", goToStart);
 document.getElementById("btnBack").addEventListener("click", goBack);
 document.getElementById("btnDelete").addEventListener("click", deleteLastWord);
 document.getElementById("btnSpeak").addEventListener("click", speak);
+document.getElementById("btnSettings").addEventListener("click", openSettings);
+document.getElementById("btnCancelSettings").addEventListener("click", closeSettings);
+settingsForm.addEventListener("submit", saveSettings);
+uiScale.addEventListener("input", () => applyUiScale(uiScale.value));
 categoryForm.addEventListener("submit", createCategory);
 document.getElementById("btnCancelCategory").addEventListener("click", closeCategoryDialog);
 wordForm.addEventListener("submit", createWord);
@@ -703,5 +767,6 @@ setupColorPalette(wordPalette, wordColor);
 setupColorPalette(editPalette, editColor);
 setPaletteValue(categoryPalette, categoryColor, "#86b88a");
 setPaletteValue(wordPalette, wordColor, "#86b88a");
+applyUiScale(localStorage.getItem("uiScale") || "100");
 
 loadData();

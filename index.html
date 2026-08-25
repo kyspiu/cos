@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mówik</title>
     <link rel="icon" href="icon.png" type="image/x-icon">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=9">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#a9c4a3">
     <meta name="mobile-web-app-capable" content="yes">
@@ -97,18 +97,35 @@
                     <p class="form-message" id="editMessage" role="status" aria-live="polite"></p>
                 </form>
             </dialog>
+            <dialog class="settings-dialog" id="settingsDialog">
+                <form id="settingsForm">
+                    <h2>Ustawienia</h2>
+                    <label for="uiScale">Rozmiar interfejsu</label>
+                    <div class="scale-control">
+                        <span aria-hidden="true">A</span>
+                        <input id="uiScale" type="range" min="75" max="125" step="5" value="100">
+                        <span class="scale-large" aria-hidden="true">A</span>
+                    </div>
+                    <output id="uiScaleValue" for="uiScale">100%</output>
+                    <div class="dialog-actions">
+                        <button class="dialog-cancel" id="btnCancelSettings" type="button">ANULUJ</button>
+                        <button class="add-btn" type="submit">ZAPISZ</button>
+                    </div>
+                </form>
+            </dialog>
         </main>
 
         <nav class="actions">
             <button id="btnStart" class="action-btn" type="button">ZACZNIJ OD NOWA</button>
             <button id="btnBack" class="action-btn" type="button">COFNIJ</button>
             <button id="btnDelete" class="action-btn" type="button">USUŃ</button>
+            <button id="btnSettings" class="action-btn settings" type="button" aria-label="Ustawienia" title="Ustawienia">⚙<span>USTAWIENIA</span></button>
             <button id="btnSpeak" class="action-btn speak" type="button">POWIEDZ</button>
         </nav>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js"></script>
+    <script src="app.js?v=10"></script>
     <script>
         if ("serviceWorker" in navigator) {
             window.addEventListener("load", () => navigator.serviceWorker.register("sw.js"));
