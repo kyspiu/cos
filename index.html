@@ -125,10 +125,10 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js?v=10"></script>
+    <script src="app.js?v=20"></script>
     <script>
         if ("serviceWorker" in navigator) {
-            window.addEventListener("load", () => navigator.serviceWorker.register("sw.js"));
+            window.addEventListener("load", () => navigator.serviceWorker.register("sw.js?v=2", { updateViaCache: "none" }));
         }
     </script>
 </body>
