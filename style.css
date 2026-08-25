@@ -731,6 +731,18 @@ main {
     }
 }
 
+.card-emoji,
+.card-add-category .card-emoji {
+    font-size: calc(3.5rem * var(--ui-scale) * var(--card-scale) * 0.75);
+}
+
+@media (max-width: 600px) {
+    .card-emoji,
+    .card-add-category .card-emoji {
+        font-size: clamp(1.35rem, calc(7vw * var(--ui-scale) * var(--card-scale) * 0.75), calc(2.5rem * var(--ui-scale) * var(--card-scale) * 0.75));
+    }
+}
+
 @media (orientation: landscape) and (max-height: 650px) {
     .container {
         max-width: 1440px;
