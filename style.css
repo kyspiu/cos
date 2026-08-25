@@ -6,6 +6,7 @@
 
 :root {
     --ui-scale: 1;
+    --card-scale: 0.85;
     --ui-ink: #26352d;
     --ui-muted: #617064;
     --ui-sage: #a9c4a3;
@@ -40,6 +41,7 @@ body {
 
 header {
     display: flex;
+    flex-direction: column;
     flex-direction: column;
     gap: 0.75rem;
 }
@@ -83,7 +85,6 @@ header {
     color: var(--ui-muted);
     padding: 0 0.25rem;
 }
-
 main {
     flex: 1;
 }
@@ -676,6 +677,60 @@ main {
     }
 }
 
+/* Compact presentation area and footer controls. */
+.speech-display {
+    min-height: calc(4.5rem * var(--ui-scale) * 0.5625);
+    padding: calc(1rem * var(--ui-scale) * 0.5625) calc(1.25rem * var(--ui-scale) * 0.5625);
+    gap: calc(0.45rem * var(--ui-scale) * 0.5625);
+    font-size: calc(2.4rem * var(--ui-scale) * 0.5625);
+}
+
+.speech-word {
+    min-height: calc(2.25rem * var(--ui-scale) * 0.5625);
+    padding: calc(0.25rem * var(--ui-scale) * 0.5625) calc(0.55rem * var(--ui-scale) * 0.5625);
+}
+
+.actions {
+    gap: calc(1rem * var(--ui-scale) * 0.5625);
+}
+
+.action-btn {
+    min-height: calc(90px * var(--ui-scale) * 0.5625);
+    padding: calc(1rem * var(--ui-scale) * 0.5625);
+    font-size: calc(1.6rem * var(--ui-scale) * 0.5625);
+    border-radius: calc(1rem * var(--ui-scale) * 0.5625);
+}
+
+@media (max-width: 600px) {
+    .action-btn {
+        min-height: calc(70px * var(--ui-scale) * 0.5625);
+        padding: calc(0.45rem * var(--ui-scale) * 0.5625);
+        font-size: clamp(0.55rem, calc(1.25rem * var(--ui-scale) * 0.5625), 0.94rem);
+        line-height: 1.1;
+    }
+}
+
+.grid {
+    grid-template-columns: repeat(auto-fit, minmax(clamp(64px, calc(170px * var(--ui-scale) * var(--card-scale)), calc(170px * var(--ui-scale) * var(--card-scale))), 1fr));
+}
+
+.card {
+    padding: clamp(0.2rem, calc(1.25rem * var(--ui-scale) * var(--card-scale)), 1.25rem);
+    gap: calc(0.75rem * var(--ui-scale) * var(--card-scale));
+    font-size: calc(2rem * var(--ui-scale) * var(--card-scale));
+}
+
+.card-emoji,
+.card-add-category .card-emoji {
+    font-size: calc(3.5rem * var(--ui-scale) * var(--card-scale));
+}
+
+@media (max-width: 600px) {
+    .grid {
+        grid-template-columns: repeat(auto-fit, minmax(clamp(64px, calc(140px * var(--ui-scale) * var(--card-scale)), calc(140px * var(--ui-scale) * var(--card-scale))), 1fr));
+    }
+}
+
 @media (orientation: landscape) and (max-height: 650px) {
     .container {
         max-width: 1440px;
@@ -911,5 +966,24 @@ main {
         min-height: 26px;
         padding: 0.15rem 0.1rem;
         font-size: 0.44rem;
+    }
+}
+
+.grid {
+    grid-template-columns: repeat(auto-fit, minmax(clamp(64px, calc(170px * var(--ui-scale) * var(--card-scale)), calc(170px * var(--ui-scale) * var(--card-scale))), 1fr));
+}
+
+@media (max-width: 600px) {
+    .grid {
+        grid-template-columns: repeat(auto-fit, minmax(clamp(64px, calc(140px * var(--ui-scale) * var(--card-scale)), calc(140px * var(--ui-scale) * var(--card-scale))), 1fr));
+    }
+}
+
+@media (max-width: 600px) {
+    .action-btn {
+        min-height: calc(70px * var(--ui-scale) * 0.5625);
+        padding: calc(0.45rem * var(--ui-scale) * 0.5625);
+        font-size: clamp(0.55rem, calc(1.25rem * var(--ui-scale) * 0.5625), 0.94rem);
+        line-height: 1.1;
     }
 }
