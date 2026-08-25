@@ -23,7 +23,6 @@ const categoryPath = document.getElementById("categoryPath");
 const categoryDialog = document.getElementById("categoryDialog");
 const categoryForm = document.getElementById("categoryForm");
 const categoryName = document.getElementById("categoryName");
-const categoryEmoji = document.getElementById("categoryEmoji");
 const categoryColor = document.getElementById("categoryColor");
 const categorySpeak = document.getElementById("categorySpeak");
 const categoryPalette = document.getElementById("categoryPalette");
@@ -31,7 +30,6 @@ const categoryMessage = document.getElementById("categoryMessage");
 const editDialog = document.getElementById("editDialog");
 const editForm = document.getElementById("editForm");
 const editName = document.getElementById("editName");
-const editEmoji = document.getElementById("editEmoji");
 const editColor = document.getElementById("editColor");
 const editPalette = document.getElementById("editPalette");
 const editSpeak = document.getElementById("editSpeak");
@@ -41,7 +39,6 @@ let itemBeingEdited = null;
 const wordDialog = document.getElementById("wordDialog");
 const wordForm = document.getElementById("wordForm");
 const wordName = document.getElementById("wordName");
-const wordEmoji = document.getElementById("wordEmoji");
 const wordColor = document.getElementById("wordColor");
 const wordPalette = document.getElementById("wordPalette");
 const wordMessage = document.getElementById("wordMessage");
@@ -157,10 +154,6 @@ function render() {
         card.style.color = "#26352d";
         card.type = "button";
 
-        const emoji = document.createElement("span");
-        emoji.className = "card-emoji";
-        emoji.textContent = item.emoji || (item.type === "category" ? "📁" : "💬");
-
         const label = document.createElement("span");
         label.className = "card-label";
         label.textContent = item.name;
@@ -170,14 +163,7 @@ function render() {
         typeLabel.className = "card-type";
         typeLabel.textContent = item.type === "category" ? "KATEGORIA" : "SŁOWO";
 
-        const speechMode = document.createElement("span");
-        speechMode.className = "speech-mode";
-        speechMode.textContent = item.type === "category" && item.speak_enabled === false ? "🔇" : "🎙";
-        speechMode.title = item.type === "category" && item.speak_enabled === false
-            ? "Pomijana przez POWIEDZ"
-            : "Czytana przez POWIEDZ";
-
-        card.append(emoji, label, typeLabel, speechMode);
+        card.append(label, typeLabel);
         card.addEventListener("click", () => handleItemClick(item));
         cardShell.appendChild(card);
 
@@ -198,7 +184,7 @@ function render() {
     const addCategoryButton = document.createElement("button");
     addCategoryButton.className = "card card-add-category";
     addCategoryButton.type = "button";
-    addCategoryButton.innerHTML = "<span class=\"card-emoji\">+</span><span class=\"card-label\">NOWA KATEGORIA</span><span class=\"card-type\">DODAJ</span>";
+    addCategoryButton.innerHTML = "<span class=\"card-label\">NOWA KATEGORIA</span><span class=\"card-type\">DODAJ</span>";
     addCategoryButton.addEventListener("click", openCategoryDialog);
     addCategoryShell.appendChild(addCategoryButton);
     const emptyAudioControls = document.createElement("div");
@@ -213,7 +199,7 @@ function render() {
     const addWordButton = document.createElement("button");
     addWordButton.className = "card card-add-word";
     addWordButton.type = "button";
-    addWordButton.innerHTML = "<span class=\"card-emoji\">💬</span><span class=\"card-label\">NOWE SŁOWO</span><span class=\"card-type\">DODAJ</span>";
+    addWordButton.innerHTML = "<span class=\"card-label\">NOWE SŁOWO</span><span class=\"card-type\">DODAJ</span>";
     addWordButton.addEventListener("click", openWordDialog);
     addWordShell.appendChild(addWordButton);
     const emptyWordControls = document.createElement("div");
@@ -243,9 +229,6 @@ function fitCardLabel(label) {
     label.style.fontSize = "";
     card.style.padding = "";
     card.style.gap = "";
-    const emoji = card.querySelector(".card-emoji");
-    if (emoji) emoji.style.fontSize = "";
-
     let fontSize = parseFloat(getComputedStyle(label).fontSize);
     while (card && (label.scrollWidth > label.clientWidth || card.scrollHeight > card.clientHeight) && fontSize > 8) {
         fontSize -= 1;
@@ -261,13 +244,6 @@ function fitCardLabel(label) {
         card.style.gap = `${gap}px`;
     }
 
-    if (emoji) {
-        let emojiSize = parseFloat(getComputedStyle(emoji).fontSize);
-        while (card.scrollHeight > card.clientHeight && emojiSize > 14) {
-            emojiSize -= 1;
-            emoji.style.fontSize = `${emojiSize}px`;
-        }
-    }
 }
 
 function fitAllCardLabels() {
@@ -389,7 +365,6 @@ function createAudioControls(item) {
 function openEditDialog(item) {
     itemBeingEdited = item;
     editName.value = item.name;
-    editEmoji.value = item.emoji || "";
     setPaletteValue(editPalette, editColor, item.color || "#86b88a");
     editSpeakRow.hidden = item.type !== "category";
     editSpeak.checked = item.speak_enabled !== false;
@@ -409,10 +384,7 @@ async function saveEditedItem(event) {
 
     const table = itemBeingEdited.type === "category" ? "categories" : "words";
     const displayName = editName.value.trim().toUpperCase();
-    const changes = {
-        emoji: editEmoji.value.trim() || (table === "categories" ? "📁" : "💬"),
-        color: editColor.value
-    };
+    const changes = { color: editColor.value };
     if (table === "categories") {
         changes.name = displayName;
         changes.speak_enabled = editSpeak.checked;
@@ -597,7 +569,6 @@ async function createWord(event) {
             category_id: categoryId,
             word: name.toUpperCase(),
             phrase: null,
-            emoji: wordEmoji.value.trim() || "💬",
             color: wordColor.value,
             sort_order: siblingWords.length + 1
         })
@@ -626,7 +597,6 @@ async function createCategory(event) {
         .from("categories")
         .insert({
             name: name.toUpperCase(),
-            emoji: categoryEmoji.value.trim() || "📁",
             color: categoryColor.value,
             speak_enabled: categorySpeak.checked,
             parent_id: parentId,

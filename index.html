@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mówik</title>
     <link rel="icon" href="icon.png" type="image/x-icon">
-    <link rel="stylesheet" href="style.css?v=20">
+    <link rel="stylesheet" href="style.css?v=21">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#a9c4a3">
     <meta name="mobile-web-app-capable" content="yes">
@@ -26,10 +26,6 @@
                     <label>
                         Nazwa
                         <input id="categoryName" type="text" maxlength="32" placeholder="np. JEDZENIE" required>
-                    </label>
-                    <label>
-                        Emoji
-                        <input id="categoryEmoji" type="text" maxlength="4" placeholder="📁">
                     </label>
                     <label>
                         Kolor
@@ -55,10 +51,6 @@
                         <input id="wordName" type="text" maxlength="64" placeholder="np. JESTEM GŁODNY" required>
                     </label>
                     <label>
-                        Emoji
-                        <input id="wordEmoji" type="text" maxlength="4" placeholder="💬">
-                    </label>
-                    <label>
                         Kolor
                         <input id="wordColor" type="hidden" value="#86b88a">
                         <div class="color-palette" id="wordPalette" aria-label="Wybierz kolor słowa"></div>
@@ -76,10 +68,6 @@
                     <label>
                         Nazwa
                         <input id="editName" type="text" maxlength="64" required>
-                    </label>
-                    <label>
-                        Emoji
-                        <input id="editEmoji" type="text" maxlength="4">
                     </label>
                     <label>
                         Kolor
@@ -125,7 +113,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js?v=20"></script>
+    <script src="app.js?v=21"></script>
     <script>
         if ("serviceWorker" in navigator) {
             window.addEventListener("load", () => navigator.serviceWorker.register("sw.js?v=2", { updateViaCache: "none" }));
