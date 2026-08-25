@@ -253,15 +253,6 @@ function fitAllCardLabels() {
 function updateSpeechDisplay() {
     speechDisplay.replaceChildren();
 
-    if (state.path.length > 1) {
-        state.path.slice(1).forEach((category) => {
-            const categoryElement = document.createElement("span");
-            categoryElement.className = "speech-word speech-category";
-            categoryElement.textContent = category.name;
-            speechDisplay.appendChild(categoryElement);
-        });
-    }
-
     state.sentence.forEach((word) => {
         const wordElement = document.createElement("span");
         wordElement.className = "speech-word";
@@ -276,7 +267,7 @@ function updateSpeechDisplay() {
 
 function handleItemClick(item) {
     if (item.type === "word") {
-        state.sentence.push({ ...item, selectedCategoryId: getCurrentCategory().id });
+        state.sentence.push({ ...item });
         updateSpeechDisplay();
         playItemAudio(item).then((played) => {
             if (!played) speakTextAndWait(item.name);
@@ -284,11 +275,6 @@ function handleItemClick(item) {
         return;
     }
 
-    if (item.speak_enabled !== false) {
-        playItemAudio(item).then((played) => {
-            if (!played) speakTextAndWait(item.name);
-        });
-    }
     state.path.push(item);
     render();
 }
@@ -624,8 +610,6 @@ function goToStart() {
 
 function goBack() {
     if (state.path.length > 1) {
-        const leavingCategory = getCurrentCategory();
-        state.sentence = state.sentence.filter((word) => word.selectedCategoryId !== leavingCategory.id);
         state.path.pop();
         render();
     }
@@ -639,10 +623,7 @@ function deleteLastWord() {
 }
 
 async function speak() {
-    const speechItems = [
-        ...state.path.slice(1).filter((category) => category.speak_enabled !== false),
-        ...state.sentence
-    ];
+    const speechItems = state.sentence;
     if (speechItems.length === 0) return;
     window.speechSynthesis.cancel();
     for (const item of speechItems) {
