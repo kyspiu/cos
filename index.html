@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mówik</title>
+    <link rel="icon" href="icon.png" type="image/x-icon">
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#a9c4a3">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="speech-display" id="speechDisplay" aria-live="polite">—</div>
+            <div class="category-path" id="categoryPath">Kategorie główne</div>
+        </header>
+
+        <main>
+            <div class="grid" id="grid"></div>
+            <dialog class="category-dialog" id="categoryDialog">
+                <form id="categoryForm">
+                    <h2>Nowa kategoria</h2>
+                    <label>
+                        Nazwa
+                        <input id="categoryName" type="text" maxlength="32" placeholder="np. JEDZENIE" required>
+                    </label>
+                    <label>
+                        Emoji
+                        <input id="categoryEmoji" type="text" maxlength="4" placeholder="📁">
+                    </label>
+                    <label>
+                        Kolor
+                        <input id="categoryColor" type="hidden" value="#86b88a">
+                        <div class="color-palette" id="categoryPalette" aria-label="Wybierz kolor kategorii"></div>
+                    </label>
+                    <div class="dialog-actions">
+                        <button class="dialog-cancel" id="btnCancelCategory" type="button">ANULUJ</button>
+                        <button class="add-btn" type="submit">DODAJ</button>
+                    </div>
+                    <p class="form-message" id="categoryMessage" role="status" aria-live="polite"></p>
+                </form>
+            </dialog>
+            <dialog class="category-dialog" id="wordDialog">
+                <form id="wordForm">
+                    <h2>Nowe słowo</h2>
+                    <label>
+                        Słowo lub fraza
+                        <input id="wordName" type="text" maxlength="64" placeholder="np. JESTEM GŁODNY" required>
+                    </label>
+                    <label>
+                        Emoji
+                        <input id="wordEmoji" type="text" maxlength="4" placeholder="💬">
+                    </label>
+                    <label>
+                        Kolor
+                        <input id="wordColor" type="hidden" value="#86b88a">
+                        <div class="color-palette" id="wordPalette" aria-label="Wybierz kolor słowa"></div>
+                    </label>
+                    <div class="dialog-actions">
+                        <button class="dialog-cancel" id="btnCancelWord" type="button">ANULUJ</button>
+                        <button class="add-btn" type="submit">DODAJ</button>
+                    </div>
+                    <p class="form-message" id="wordMessage" role="status" aria-live="polite"></p>
+                </form>
+            </dialog>
+            <dialog class="category-dialog" id="editDialog">
+                <form id="editForm">
+                    <h2>Edytuj element</h2>
+                    <label>
+                        Nazwa
+                        <input id="editName" type="text" maxlength="64" required>
+                    </label>
+                    <label>
+                        Emoji
+                        <input id="editEmoji" type="text" maxlength="4">
+                    </label>
+                    <label>
+                        Kolor
+                        <input id="editColor" type="hidden">
+                        <div class="color-palette" id="editPalette" aria-label="Wybierz kolor"></div>
+                    </label>
+                    <div class="dialog-actions">
+                        <button class="dialog-cancel" id="btnCancelEdit" type="button">ANULUJ</button>
+                        <button class="add-btn" type="submit">ZAPISZ</button>
+                    </div>
+                    <p class="form-message" id="editMessage" role="status" aria-live="polite"></p>
+                </form>
+            </dialog>
+            <dialog class="settings-dialog" id="settingsDialog">
+                <form id="settingsForm">
+                    <div class="settings-heading">
+                        <h2>Ustawienia</h2>
+                        <button class="settings-close" id="btnCloseSettings" type="button" aria-label="Zamknij ustawienia">×</button>
+                    </div>
+                    <label class="settings-range-label" for="cardScale">
+                        <span>Rozmiar kafelków</span>
+                        <output id="cardScaleValue" for="cardScale">100%</output>
+                    </label>
+                    <input id="cardScale" type="range" min="50" max="100" step="5" value="100">
+                    <label class="checkbox-label settings-toggle">
+                        <input id="darkMode" type="checkbox">
+                        Tryb ciemny
+                    </label>
+                    <button class="settings-reset" id="btnResetSettings" type="button">PRZYWRÓĆ DOMYŚLNE</button>
+                </form>
+            </dialog>
+        </main>
+
+        <nav class="actions">
+            <button id="btnBack" class="action-btn" type="button">COFNIJ</button>
+            <button id="btnSettings" class="action-btn settings-btn" type="button" aria-label="Otwórz ustawienia" title="Ustawienia">USTAWIENIA</button>
+        </nav>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js"></script>
+    <script>
+        // Service worker is intentionally disabled for browser-based usage.
+        // It can be enabled later for PWA/offline support on a secure production host.
+    </script>
+</body>
+</html>
