@@ -184,14 +184,6 @@ function getCurrentItems() {
     return [...categories, ...words];
 }
 
-const IMAGE_FOLDER = ".github/workflows/";
-const IMAGE_COUNT = 20;
-
-function getRandomImagePath() {
-    const num = Math.floor(Math.random() * IMAGE_COUNT) + 1;
-    return `${IMAGE_FOLDER}${num}.jpg`;
-}
-
 function render() {
     const items = getCurrentItems();
     grid.innerHTML = "";
@@ -208,26 +200,20 @@ function render() {
         card.style.color = "#26352d";
         card.type = "button";
 
-        const cardImg = document.createElement("img");
-        cardImg.className = "card-bg-img";
-        cardImg.src = getRandomImagePath();
-        cardImg.alt = "";
-        cardImg.setAttribute("aria-hidden", "true");
+                const emoji = document.createElement("span");
+                emoji.className = "card-emoji";
+                emoji.textContent = item.emoji || (item.type === "category" ? "📁" : "💬");
 
-        const emoji = document.createElement("span");
-        emoji.className = "card-emoji";
-        emoji.textContent = item.emoji || (item.type === "category" ? "📁" : "💬");
+                const label = document.createElement("span");
+                label.className = "card-label";
+                label.textContent = item.name;
+                label.classList.toggle("single-word", !/\s/.test(item.name));
 
-        const label = document.createElement("span");
-        label.className = "card-label";
-        label.textContent = item.name;
-        label.classList.toggle("single-word", !/\s/.test(item.name));
+                const typeLabel = document.createElement("span");
+                typeLabel.className = "card-type";
+                typeLabel.textContent = item.type === "category" ? "KATEGORIA" : "SŁOWO";
 
-        const typeLabel = document.createElement("span");
-        typeLabel.className = "card-type";
-        typeLabel.textContent = item.type === "category" ? "KATEGORIA" : "SŁOWO";
-
-        card.append(cardImg, emoji, label, typeLabel);
+                card.append(emoji, label, typeLabel);
         card.addEventListener("click", () => handleItemClick(item));
         cardShell.appendChild(card);
 
