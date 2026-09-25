@@ -69,58 +69,41 @@ create policy "public insert word audio" on storage.objects for insert to anon, 
 drop policy if exists "public update word audio" on storage.objects;
 create policy "public update word audio" on storage.objects for update to anon, authenticated using (bucket_id = 'word-audio') with check (bucket_id = 'word-audio');
 
-insert into public.categories (name, emoji, color, parent_id, sort_order)
-select seed.name, seed.emoji, seed.color, null, seed.sort_order
-from (values
-    ('ROZKAZ', '📢', '#ef4444', 1),
-    ('ZAPYTANIE', '❓', '#f59e0b', 2),
-    ('STWIERDZENIE', '✅', '#3b82f6', 3),
-    ('JA', '🧑', '#8b5cf6', 4)
-) as seed(name, emoji, color, sort_order)
-where not exists (select 1 from public.categories existing where existing.name = seed.name and existing.parent_id is null);
+insert into storage.buckets (id, name, public)
+values ('sentence-audio', 'sentence-audio', true)
+on conflict (id) do update set public = true;
 
-insert into public.categories (name, emoji, color, parent_id, sort_order)
-select seed.name, seed.emoji, seed.color, parent_category.id, seed.sort_order
-from (values
-    ('EMOCJE', '❤️', '#ec4899', 1),
-    ('POTRZEBY', '🤲', '#10b981', 2),
-    ('BÓL', '🤕', '#f97316', 3),
-    ('CZYNNOŚCI', '🏃', '#06b6d4', 4)
-) as seed(name, emoji, color, sort_order)
-join public.categories parent_category on parent_category.name = 'JA' and parent_category.parent_id is null
-where not exists (
-    select 1 from public.categories existing
-    where existing.name = seed.name and existing.parent_id = parent_category.id
+drop policy if exists "public read sentence audio" on storage.objects;
+create policy "public read sentence audio" on storage.objects for select to anon, authenticated using (bucket_id = 'sentence-audio');
+
+drop policy if exists "public insert sentence audio" on storage.objects;
+create policy "public insert sentence audio" on storage.objects for insert to anon, authenticated with check (bucket_id = 'sentence-audio');
+
+drop policy if exists "public update sentence audio" on storage.objects;
+create policy "public update sentence audio" on storage.objects for update to anon, authenticated using (bucket_id = 'sentence-audio') with check (bucket_id = 'sentence-audio');
+
+drop policy if exists "public delete sentence audio" on storage.objects;
+create policy "public delete sentence audio" on storage.objects for delete to anon, authenticated using (bucket_id = 'sentence-audio');
+
+create table if not exists public.sentence_items (
+    id text primary key,
+    text text not null,
+    audio_url text,
+    created_at timestamptz not null default now()
 );
 
-insert into public.words (category_id, word, phrase, emoji, color, sort_order)
-select category.id, seed.word, seed.phrase, seed.emoji, seed.color, seed.sort_order
-from (values
-    ('ROZKAZ', 'CZEKAJ', null, '✋', '#ef4444', 1),
-    ('ROZKAZ', 'CHODŹ', null, '🚶', '#ef4444', 2),
-    ('ZAPYTANIE', 'CO?', null, '❓', '#f59e0b', 1),
-    ('ZAPYTANIE', 'GDZIE?', null, '🧭', '#f59e0b', 2),
-    ('STWIERDZENIE', 'TAK', null, '👍', '#3b82f6', 1),
-    ('STWIERDZENIE', 'NIE', null, '👎', '#3b82f6', 2),
-    ('EMOCJE', 'SZCZĘŚLIWA', null, '😊', '#fbbf24', 1),
-    ('EMOCJE', 'SMUTNA', null, '😢', '#60a5fa', 2),
-    ('EMOCJE', 'ZŁA', null, '😠', '#f87171', 3),
-    ('EMOCJE', 'PRZESTRASZONA', null, '😨', '#a78bfa', 4),
-    ('POTRZEBY', 'JEDZENIE', null, '🍽️', '#f59e0b', 1),
-    ('POTRZEBY', 'PICIE', null, '🥤', '#3b82f6', 2),
-    ('POTRZEBY', 'TOALETA', null, '🚻', '#8b5cf6', 3),
-    ('POTRZEBY', 'ODPOCZYNEK', null, '🛌', '#6b7280', 4),
-    ('BÓL', 'GŁOWA', null, '🤯', '#f87171', 1),
-    ('BÓL', 'BRZUCH', null, '🤰', '#fb923c', 2),
-    ('BÓL', 'NOGA', null, '🦵', '#a78bfa', 3),
-    ('BÓL', 'RĘKA', null, '🖐️', '#60a5fa', 4),
-    ('CZYNNOŚCI', 'CHCĘ', null, '👍', '#22c55e', 1),
-    ('CZYNNOŚCI', 'NIE CHCĘ', null, '👎', '#ef4444', 2),
-    ('CZYNNOŚCI', 'ŚPIĘ', null, '😴', '#818cf8', 3),
-    ('CZYNNOŚCI', 'WSTAJĘ', null, '🧍', '#fbbf24', 4)
-) as seed(category_name, word, phrase, emoji, color, sort_order)
-join public.categories category on category.name = seed.category_name
-where not exists (
-    select 1 from public.words existing
-    where existing.category_id = category.id and existing.word = seed.word
-);
+alter table public.sentence_items enable row level security;
+
+grant select, insert, update, delete on public.sentence_items to anon, authenticated;
+
+drop policy if exists "public read sentence_items" on public.sentence_items;
+create policy "public read sentence_items" on public.sentence_items for select to anon, authenticated using (true);
+
+drop policy if exists "public insert sentence_items" on public.sentence_items;
+create policy "public insert sentence_items" on public.sentence_items for insert to anon, authenticated with check (true);
+
+drop policy if exists "public update sentence_items" on public.sentence_items;
+create policy "public update sentence_items" on public.sentence_items for update to anon, authenticated using (true) with check (true);
+
+drop policy if exists "public delete sentence_items" on public.sentence_items;
+create policy "public delete sentence_items" on public.sentence_items for delete to anon, authenticated using (true);
