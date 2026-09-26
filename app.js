@@ -1,4 +1,8 @@
 const STORAGE_KEY = "mowik-sentences";
+const QUICK_RESPONSE_IDS = {
+  yes: "__mowik_quick_response_yes__",
+  no: "__mowik_quick_response_no__"
+};
 
 const SUPABASE_URL = "https://jewnkofqgzorwtypcrji.supabase.co";
 const SUPABASE_KEY = "sb_publishable_X6kl-KaeI591E6xW7KFl6g_VYTPCC1G";
@@ -6,9 +10,14 @@ const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_U
 
 let activeRecording = null;
 let activeSentenceId = null;
+let editingSentenceId = null;
 
 const state = {
-  sentenceList: loadSentenceList()
+  sentenceList: loadSentenceList(),
+  quickResponses: {
+    yes: { id: QUICK_RESPONSE_IDS.yes, text: "TAK", audioUrl: "" },
+    no: { id: QUICK_RESPONSE_IDS.no, text: "NIE", audioUrl: "" }
+  }
 };
 
 const sentenceList = document.getElementById("sentenceList");
@@ -16,6 +25,7 @@ const sentenceInput = document.getElementById("sentenceInput");
 const btnAddSentence = document.getElementById("btnAddSentence");
 const sentenceCount = document.getElementById("sentenceCount");
 const appStatus = document.getElementById("appStatus");
+const quickResponses = document.querySelector(".quick-responses");
 
 function createId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -69,18 +79,34 @@ async function loadSentencesFromSupabase() {
     .select("id, text, audio_url")
     .order("created_at", { ascending: true });
 
-  if (error || !data || data.length === 0) {
+  if (error || !data) {
+    if (error) {
+      console.error("Nie udało się pobrać zdań z Supabase:", error);
+    }
     return;
   }
 
-  state.sentenceList = data.map((item) => ({
-    id: String(item.id),
-    text: item.text,
-    audioUrl: item.audio_url || ""
-  }));
+  const remoteSentences = [];
+  data.forEach((item) => {
+    const id = String(item.id);
+    const quickResponse = Object.values(state.quickResponses).find((response) => response.id === id);
+    if (quickResponse) {
+      quickResponse.audioUrl = item.audio_url || "";
+    } else {
+      remoteSentences.push({
+        id,
+        text: item.text,
+        audioUrl: item.audio_url || ""
+      });
+    }
+  });
 
+  if (remoteSentences.length > 0) {
+    state.sentenceList = remoteSentences;
+  }
   saveSentenceList();
   renderSentenceList();
+  renderQuickResponses();
 }
 
 async function upsertSentenceInSupabase(item) {
@@ -130,6 +156,43 @@ function playSentenceAudio(sentence) {
   });
 }
 
+function renderQuickResponses() {
+  quickResponses.querySelectorAll(".quick-response").forEach((container) => {
+    const response = state.quickResponses[container.dataset.response];
+    if (!response) {
+      return;
+    }
+
+    const playButton = container.querySelector(".quick-response-play");
+    const recordButton = container.querySelector(".quick-response-record");
+    const status = container.querySelector(".quick-response-status");
+    const isRecording = activeSentenceId === response.id;
+
+    playButton.setAttribute("aria-label", `Odtwórz ${response.text}`);
+    playButton.title = response.audioUrl ? `Odtwórz ${response.text}` : "Najpierw nagraj odpowiedź";
+    recordButton.textContent = isRecording ? "Zatrzymaj" : "Nagraj";
+    recordButton.setAttribute("aria-label", `${isRecording ? "Zatrzymaj nagrywanie" : "Nagraj"} ${response.text}`);
+    status.textContent = response.audioUrl && !isRecording ? "✓ Nagrane" : "";
+  });
+}
+
+quickResponses.addEventListener("click", async (event) => {
+  const container = event.target.closest(".quick-response");
+  if (!container) {
+    return;
+  }
+  const response = state.quickResponses[container.dataset.response];
+  if (!response) {
+    return;
+  }
+
+  if (event.target.closest(".quick-response-play")) {
+    playSentenceAudio(response);
+  } else if (event.target.closest(".quick-response-record")) {
+    await toggleRecording(response);
+  }
+});
+
 function renderSentenceList() {
   sentenceList.innerHTML = "";
   sentenceCount.textContent = `${state.sentenceList.length} ${getSentenceCountLabel(state.sentenceList.length)}`;
@@ -150,35 +213,55 @@ function renderSentenceList() {
     const content = document.createElement("div");
     content.className = "sentence-content";
 
-    const text = document.createElement("span");
-    text.className = "sentence-text";
-    text.tabIndex = 0;
-    text.setAttribute("role", "button");
-    text.setAttribute("aria-label", `Odtwórz zdanie: ${sentence.text}`);
-    text.textContent = sentence.text;
+    if (editingSentenceId === sentence.id) {
+      const editInput = document.createElement("input");
+      editInput.className = "sentence-edit-input";
+      editInput.type = "text";
+      editInput.maxLength = 80;
+      editInput.value = sentence.text;
+      editInput.setAttribute("aria-label", `Edytuj zdanie: ${sentence.text}`);
+      editInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          saveSentenceEdit(sentence, editInput);
+        } else if (event.key === "Escape") {
+          editingSentenceId = null;
+          renderSentenceList();
+        }
+      });
+      content.appendChild(editInput);
+      queueMicrotask(() => editInput.focus());
+    } else {
+      const text = document.createElement("span");
+      text.className = "sentence-text";
+      text.tabIndex = 0;
+      text.setAttribute("role", "button");
+      text.setAttribute("aria-label", `Odtwórz zdanie: ${sentence.text}`);
+      text.textContent = sentence.text;
 
-    text.addEventListener("click", (event) => {
-      event.stopPropagation();
-      playSentenceAudio(sentence);
-    });
-    text.addEventListener("keydown", (event) => {
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
+      text.addEventListener("click", (event) => {
+        event.stopPropagation();
         playSentenceAudio(sentence);
-      }
-    });
+      });
+      text.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          playSentenceAudio(sentence);
+        }
+      });
+      content.appendChild(text);
 
-    content.appendChild(text);
-    if (sentence.audioUrl && activeSentenceId !== sentence.id) {
-      const recordedBadge = document.createElement("span");
-      recordedBadge.className = "sentence-recorded";
-      recordedBadge.textContent = "✓ Nagrane";
-      recordedBadge.setAttribute("aria-label", "Zdanie ma nagranie");
-      content.appendChild(recordedBadge);
+      if (sentence.audioUrl && activeSentenceId !== sentence.id) {
+        const recordedBadge = document.createElement("span");
+        recordedBadge.className = "sentence-recorded";
+        recordedBadge.textContent = "✓ Nagrane";
+        recordedBadge.setAttribute("aria-label", "Zdanie ma nagranie");
+        content.appendChild(recordedBadge);
+      }
     }
 
     row.addEventListener("click", (event) => {
-      if (event.target.closest("button")) {
+      if (event.target.closest("button, input")) {
         return;
       }
       playSentenceAudio(sentence);
@@ -211,16 +294,81 @@ function renderSentenceList() {
       await toggleRecording(sentence);
     });
 
-    actions.append(deleteButton, recordButton);
+    const editButton = document.createElement("button");
+    editButton.type = "button";
+    editButton.className = "sentence-action edit";
+    editButton.textContent = editingSentenceId === sentence.id ? "Zapisz" : "Edytuj";
+    editButton.setAttribute("aria-label", `${editingSentenceId === sentence.id ? "Zapisz" : "Edytuj"} zdanie ${sentence.text}`);
+    editButton.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (editingSentenceId === sentence.id) {
+        saveSentenceEdit(sentence, content.querySelector(".sentence-edit-input"));
+      } else {
+        editingSentenceId = sentence.id;
+        renderSentenceList();
+      }
+    });
+
+    if (editingSentenceId === sentence.id) {
+      const cancelButton = document.createElement("button");
+      cancelButton.type = "button";
+      cancelButton.className = "sentence-action";
+      cancelButton.textContent = "Anuluj";
+      cancelButton.addEventListener("click", () => {
+        editingSentenceId = null;
+        renderSentenceList();
+      });
+      actions.append(editButton, cancelButton);
+    } else {
+      actions.append(deleteButton, editButton, recordButton);
+    }
     row.append(content, actions);
     sentenceList.appendChild(row);
   });
+}
+
+async function saveSentenceEdit(sentence, input) {
+  if (!input) {
+    return;
+  }
+
+  const newText = input.value.trim();
+  if (!newText) {
+    showStatus("Treść zdania nie może być pusta.");
+    input.focus();
+    return;
+  }
+
+  const textChanged = newText !== sentence.text;
+  sentence.text = newText;
+  if (textChanged && sentence.audioUrl) {
+    sentence.audioUrl = "";
+    if (supabaseClient) {
+      const { error } = await supabaseClient.storage
+        .from("sentence-audio")
+        .remove([`${sentence.id}.webm`]);
+      if (error) {
+        console.error("Nie udało się usunąć starego nagrania:", error);
+      }
+    }
+  }
+
+  editingSentenceId = null;
+  saveSentenceList();
+  renderSentenceList();
+  const synced = await upsertSentenceInSupabase(sentence);
+  showStatus(synced ? "Zdanie zapisane." : "Zdanie zapisane na tym urządzeniu, ale nie udało się zsynchronizować go z serwerem.");
 }
 
 function stopActiveRecording() {
   if (activeRecording && activeRecording.state !== "inactive") {
     activeRecording.stop();
   }
+}
+
+function getRecordingItem(id) {
+  return state.sentenceList.find((item) => item.id === id)
+    || Object.values(state.quickResponses).find((item) => item.id === id);
 }
 
 async function toggleRecording(sentence) {
@@ -249,6 +397,7 @@ async function toggleRecording(sentence) {
     activeRecording = recorder;
     activeSentenceId = sentence.id;
     renderSentenceList();
+    renderQuickResponses();
 
     recorder.ondataavailable = (event) => {
       if (event.data.size > 0) {
@@ -258,7 +407,7 @@ async function toggleRecording(sentence) {
 
     recorder.onstop = async () => {
       const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
-      const item = state.sentenceList.find((entry) => entry.id === sentence.id);
+      const item = getRecordingItem(sentence.id);
 
       try {
         if (!item) {
@@ -305,6 +454,7 @@ async function toggleRecording(sentence) {
         activeRecording = null;
         activeSentenceId = null;
         renderSentenceList();
+        renderQuickResponses();
       }
     };
 
@@ -347,4 +497,5 @@ btnAddSentence.addEventListener("click", addSentence);
 sentenceInput.addEventListener("keydown", handleSentenceInputKeydown);
 
 renderSentenceList();
+renderQuickResponses();
 loadSentencesFromSupabase();

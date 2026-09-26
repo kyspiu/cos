@@ -231,6 +231,66 @@ h2 {
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.8), 0 4px 0 rgba(109, 129, 112, 0.12);
 }
 
+.quick-responses {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.8rem;
+}
+
+.quick-response {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-width: 0;
+    padding: 0.65rem;
+    border: 1px solid rgba(111, 146, 116, 0.2);
+    border-radius: 1rem;
+    background: var(--ui-surface);
+    box-shadow: 0 8px 22px var(--ui-shadow-soft);
+}
+
+.quick-response-play,
+.quick-response-record {
+    min-height: 2.7rem;
+    padding: 0.45rem 0.9rem;
+    border: 1px solid var(--ui-border);
+    border-radius: 0.75rem;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.08s ease, filter 0.08s ease;
+}
+
+.quick-response-play:hover,
+.quick-response-record:hover {
+    filter: brightness(1.04);
+    transform: translateY(-1px);
+}
+
+.quick-response-play.yes {
+    flex: 1;
+    background: linear-gradient(180deg, #edf7e9 0%, #dfeee0 100%);
+    color: var(--ui-sage-dark);
+}
+
+.quick-response-play.no {
+    flex: 1;
+    background: linear-gradient(180deg, #fdf1ef 0%, #f4dfd8 100%);
+    border-color: #d9a59a;
+    color: #8e4f48;
+}
+
+.quick-response-record {
+    background: #fffdf9;
+    color: var(--ui-ink);
+}
+
+.quick-response-status {
+    color: var(--ui-sage-dark);
+    font-size: 0.72rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
 
 main {
     flex: 1;
@@ -277,6 +337,17 @@ main {
     align-items: center;
     gap: 0.65rem;
     min-width: 0;
+}
+
+.sentence-edit-input {
+    flex: 1;
+    min-width: 0;
+    min-height: 2.4rem;
+    padding: 0.35rem 0.55rem;
+    border: 1px solid var(--ui-border);
+    border-radius: 0.55rem;
+    color: var(--ui-ink);
+    font: inherit;
 }
 
 .sentence-text {
@@ -328,6 +399,12 @@ main {
     color: #8e4f48;
 }
 
+.sentence-action.edit {
+    background: linear-gradient(180deg, #edf7e9 0%, #dfeee0 100%);
+    border-color: #b9d2bc;
+    color: var(--ui-sage-dark);
+}
+
 .sentence-empty {
     padding: 1.2rem 0.8rem;
     border: 2px dashed rgba(111, 146, 116, 0.5);
@@ -376,6 +453,23 @@ main {
     .sentence-actions {
         width: 100%;
         justify-content: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .quick-response {
+        flex-wrap: wrap;
+        justify-content: center;
+        padding: 0.5rem;
+    }
+
+    .quick-response-play {
+        flex-basis: 100%;
+    }
+
+    .quick-response-status {
+        flex-basis: 100%;
+        min-height: 1rem;
+        text-align: center;
     }
 
     .sentence-action.record {
