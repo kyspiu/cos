@@ -84,7 +84,7 @@ async function loadSentencesFromSupabase() {
 }
 
 async function upsertSentenceInSupabase(item) {
-  if (!supabaseClient) return;
+  if (!supabaseClient) return false;
 
   const { error } = await supabaseClient
     .from("sentence_items")
@@ -96,7 +96,10 @@ async function upsertSentenceInSupabase(item) {
 
   if (error) {
     console.error("Błąd zapisu zdania do Supabase:", error);
+    return false;
   }
+
+  return true;
 }
 
 async function deleteSentenceFromSupabase(id) {
@@ -144,6 +147,9 @@ function renderSentenceList() {
     row.className = "sentence-row";
     row.title = sentence.audioUrl ? "Kliknij, aby odsłuchać nagranie" : "Kliknij, aby odtworzyć nagranie po dodaniu";
 
+    const content = document.createElement("div");
+    content.className = "sentence-content";
+
     const text = document.createElement("span");
     text.className = "sentence-text";
     text.tabIndex = 0;
@@ -161,6 +167,15 @@ function renderSentenceList() {
         playSentenceAudio(sentence);
       }
     });
+
+    content.appendChild(text);
+    if (sentence.audioUrl && activeSentenceId !== sentence.id) {
+      const recordedBadge = document.createElement("span");
+      recordedBadge.className = "sentence-recorded";
+      recordedBadge.textContent = "✓ Nagrane";
+      recordedBadge.setAttribute("aria-label", "Zdanie ma nagranie");
+      content.appendChild(recordedBadge);
+    }
 
     row.addEventListener("click", (event) => {
       if (event.target.closest("button")) {
@@ -187,21 +202,17 @@ function renderSentenceList() {
     const recordButton = document.createElement("button");
     recordButton.type = "button";
     recordButton.className = "sentence-action record";
-    recordButton.textContent = activeSentenceId === sentence.id ? "Zatrzymaj" : sentence.audioUrl ? "Odtwórz" : "Nagraj";
-    recordButton.setAttribute("aria-label", `${sentence.audioUrl ? "Odtwórz nagranie" : "Nagraj"}: ${sentence.text}`);
+    recordButton.textContent = activeSentenceId === sentence.id
+      ? "Zatrzymaj"
+      : "Nagraj";
+    recordButton.setAttribute("aria-label", `Nagraj: ${sentence.text}`);
     recordButton.addEventListener("click", async (event) => {
       event.stopPropagation();
-
-      if (sentence.audioUrl && activeSentenceId !== sentence.id) {
-        playSentenceAudio(sentence);
-        return;
-      }
-
       await toggleRecording(sentence);
     });
 
     actions.append(deleteButton, recordButton);
-    row.append(text, actions);
+    row.append(content, actions);
     sentenceList.appendChild(row);
   });
 }
@@ -249,38 +260,52 @@ async function toggleRecording(sentence) {
       const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
       const item = state.sentenceList.find((entry) => entry.id === sentence.id);
 
-      if (item) {
-        if (supabaseClient) {
-          try {
-            const fileName = `${item.id}.webm`;
-            const { error: uploadError } = await supabaseClient.storage
-              .from("sentence-audio")
-              .upload(fileName, blob, { contentType: blob.type || "audio/webm", upsert: true });
-
-            if (uploadError) {
-              throw uploadError;
-            }
-
-            const { data: publicUrlData } = supabaseClient.storage
-              .from("sentence-audio")
-              .getPublicUrl(fileName);
-
-            item.audioUrl = publicUrlData.publicUrl;
-            showStatus("Nagranie zapisane.");
-          } catch (uploadError) {
-            console.error("Upload audio to Supabase failed:", uploadError);
-            showStatus("Nagranie zapisane lokalnie, ale nie udało się wysłać go do Supabase.");
-          }
+      try {
+        if (!item) {
+          return;
+        }
+        if (blob.size === 0) {
+          showStatus("Nagranie jest puste. Poprzednie nagranie pozostało bez zmian.");
+          return;
+        }
+        if (!supabaseClient) {
+          showStatus("Nie można zapisać nagrania bez połączenia z serwerem.");
+          return;
         }
 
-        saveSentenceList();
-        await upsertSentenceInSupabase(item);
-      }
+        const replacingRecording = Boolean(item.audioUrl);
+        const fileName = `${item.id}.webm`;
+        const { error: uploadError } = await supabaseClient.storage
+          .from("sentence-audio")
+          .upload(fileName, blob, { contentType: blob.type || "audio/webm", upsert: true });
 
-      stream.getTracks().forEach((track) => track.stop());
-      activeRecording = null;
-      activeSentenceId = null;
-      renderSentenceList();
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        const { data: publicUrlData } = supabaseClient.storage
+          .from("sentence-audio")
+          .getPublicUrl(fileName);
+        const audioUrl = new URL(publicUrlData.publicUrl);
+        audioUrl.searchParams.set("v", String(Date.now()));
+        item.audioUrl = audioUrl.toString();
+
+        saveSentenceList();
+        const synced = await upsertSentenceInSupabase(item);
+        if (synced) {
+          showStatus(replacingRecording ? "Nagranie zastąpione nowym." : "Nagranie zapisane.");
+        } else {
+          showStatus("Nagranie zapisane, ale nie udało się zsynchronizować go z serwerem.");
+        }
+      } catch (uploadError) {
+        console.error("Upload audio to Supabase failed:", uploadError);
+        showStatus("Nie udało się zapisać nowego nagrania. Poprzednie nagranie pozostało bez zmian.");
+      } finally {
+        stream.getTracks().forEach((track) => track.stop());
+        activeRecording = null;
+        activeSentenceId = null;
+        renderSentenceList();
+      }
     };
 
     recorder.start();

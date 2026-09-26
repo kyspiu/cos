@@ -271,6 +271,14 @@ main {
     box-shadow: 0 3px 0 rgba(0, 0, 0, 0.06), 0 10px 20px rgba(50, 70, 55, 0.04);
 }
 
+.sentence-content {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: 0.65rem;
+    min-width: 0;
+}
+
 .sentence-text {
     flex: 1;
     font-size: 1.08rem;
@@ -282,6 +290,18 @@ main {
     color: var(--ui-ink);
 }
 
+.sentence-recorded {
+    flex: 0 0 auto;
+    padding: 0.2rem 0.55rem;
+    border: 1px solid #b9d2bc;
+    border-radius: 999px;
+    background: #edf6ec;
+    color: var(--ui-sage-dark);
+    font-size: 0.72rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
 .sentence-actions {
     display: flex;
     align-items: center;
@@ -289,7 +309,7 @@ main {
 }
 
 .sentence-action {
-    min-width: 76px;
+    min-width: 88px;
     min-height: 2.35rem;
     padding: 0.35rem 0.55rem;
     font-size: 0.82rem;
@@ -347,9 +367,19 @@ main {
         gap: 0.55rem;
     }
 
+    .sentence-content {
+        width: 100%;
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
     .sentence-actions {
         width: 100%;
         justify-content: flex-end;
+    }
+
+    .sentence-action.record {
+        min-width: 120px;
     }
 
     .app-mark {
