@@ -332,6 +332,12 @@ h2 {
     border-radius: 0.8rem;
     background: var(--ui-paper);
     box-shadow: 0 2px 0 rgba(83, 106, 92, 0.08);
+    transition: transform 0.12s ease, filter 0.12s ease;
+}
+
+.special-word-card:active {
+    transform: translateY(2px) scale(0.98);
+    filter: brightness(0.97);
 }
 
 .special-word-play {
@@ -531,6 +537,17 @@ h2 {
     border-radius: 0.9rem;
     background: linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(247, 250, 245, 0.9) 100%);
     box-shadow: 0 3px 0 rgba(0, 0, 0, 0.06), 0 10px 20px rgba(50, 70, 55, 0.04);
+    transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+}
+
+.reaction-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 0 rgba(0, 0, 0, 0.08);
+}
+
+.reaction-card:active {
+    transform: translateY(2px) scale(0.98);
+    filter: brightness(0.97);
 }
 
 .reaction-play {

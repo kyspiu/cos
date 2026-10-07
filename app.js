@@ -206,11 +206,9 @@ async function upsertItemInSupabase(item) {
   const payload = {
     id: item.id,
     text: item.text,
-    audio_url: item.audioUrl || null
+    audio_url: item.audioUrl || null,
+    special_words: Array.isArray(item.specialWords) ? item.specialWords : []
   };
-  if (supportsSpecialWords !== false) {
-    payload.special_words = item.special ? item.specialWords : null;
-  }
 
   const { error } = await supabaseClient
     .from("sentence_items")
@@ -288,6 +286,35 @@ function playSentenceAudio(sentence) {
   });
 }
 
+async function playSpecialWord(sentence, word) {
+  if (!sentence.audioUrl) {
+    showStatus("To zdanie nie ma jeszcze nagrania.");
+    return;
+  }
+  if (!word.audioUrl) {
+    showStatus("To słowo nie ma jeszcze nagrania.");
+    return;
+  }
+
+  try {
+    showStatus(`Odtwarzam: ${sentence.text}, potem ${word.text}`);
+    await playAudioClip(sentence.audioUrl);
+    await playAudioClip(word.audioUrl);
+  } catch (error) {
+    console.warn("Nie udało się odtworzyć zdania specjalnego:", sentence.text, word.text, error);
+    showStatus("Nie udało się odtworzyć zdania i dodatkowego słowa.");
+  }
+}
+
+function playAudioClip(audioUrl) {
+  return new Promise((resolve, reject) => {
+    const audio = new Audio(audioUrl);
+    audio.addEventListener("ended", resolve, { once: true });
+    audio.addEventListener("error", () => reject(new Error("Nagranie audio nie jest dostępne.")), { once: true });
+    audio.play().catch(reject);
+  });
+}
+
 function renderQuickResponses() {
   quickResponses.querySelectorAll(".quick-response").forEach((container) => {
     const response = state.quickResponses[container.dataset.response];
@@ -341,6 +368,12 @@ function renderReactionList() {
     const card = document.createElement("article");
     card.className = "reaction-card";
     card.setAttribute("role", "listitem");
+    card.addEventListener("click", (event) => {
+      if (event.target.closest("button, input")) {
+        return;
+      }
+      playSentenceAudio(reaction);
+    });
 
     const isEditing = editingItemId === reaction.id;
     const isRecording = activeSentenceId === reaction.id;
@@ -667,7 +700,7 @@ function renderSpecialWord(sentence, word) {
     playButton.className = "special-word-play";
     playButton.textContent = word.text;
     playButton.setAttribute("aria-label", `Odtwórz dodatkowe słowo: ${word.text}`);
-    playButton.addEventListener("click", () => playSentenceAudio(word));
+    playButton.addEventListener("click", () => playSpecialWord(sentence, word));
     card.appendChild(playButton);
   }
 

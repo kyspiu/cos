@@ -89,10 +89,10 @@ create table if not exists public.sentence_items (
     id text primary key,
     text text not null,
     audio_url text,
-    special_words jsonb,
     created_at timestamptz not null default now()
 );
 
+-- Add this column without changing existing sentence or audio data.
 alter table public.sentence_items add column if not exists special_words jsonb;
 
 alter table public.sentence_items enable row level security;
