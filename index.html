@@ -25,6 +25,10 @@
                 <input id="sentenceInput" type="text" maxlength="80" placeholder="dodaj zdanie" aria-label="Dodaj zdanie do listy" />
                 <button id="btnAddSentence" class="composer-button add-button" type="button" aria-label="Dodaj zdanie">✓</button>
             </div>
+            <label class="special-sentence-toggle">
+                <input id="specialSentenceInput" type="checkbox" />
+                <span>Zdanie specjalne</span>
+            </label>
         </header>
 
         <section class="quick-responses" aria-label="Szybkie odpowiedzi">
@@ -38,6 +42,17 @@
                 <button class="quick-response-record" type="button" aria-label="Nagraj NIE">Nagraj</button>
                 <span class="quick-response-status" aria-live="polite"></span>
             </div>
+        </section>
+
+        <section class="reaction-section" aria-labelledby="reactionHeading">
+            <div class="list-heading">
+                <h2 id="reactionHeading">Reakcje</h2>
+            </div>
+            <div class="reaction-composer">
+                <input id="reactionInput" type="text" maxlength="80" placeholder="dodaj reakcję" aria-label="Dodaj reakcję do listy" />
+                <button id="btnAddReaction" class="composer-button add-button" type="button">Dodaj</button>
+            </div>
+            <div class="reaction-list" id="reactionList" role="list" aria-live="polite"></div>
         </section>
 
         <main>
