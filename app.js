@@ -1,6 +1,10 @@
 const STORAGE_KEY = "mowik-sentences";
 const REACTION_STORAGE_KEY = "mowik-reactions";
 const REACTION_ID_PREFIX = "__mowik_reaction__";
+const NUMBER_STORAGE_KEY = "mowik-numbers";
+const NUMBER_ID_PREFIX = "__mowik_number__";
+const DATE_STORAGE_KEY = "mowik-dates";
+const DATE_ID_PREFIX = "__mowik_date__";
 const QUICK_RESPONSE_IDS = {
   yes: "__mowik_quick_response_yes__",
   no: "__mowik_quick_response_no__"
@@ -19,6 +23,8 @@ let supportsSpecialWords = null;
 const state = {
   sentenceList: loadSentenceList(),
   reactionList: loadReactionList(),
+  numberList: loadItemList(NUMBER_STORAGE_KEY, "liczby"),
+  dateList: loadItemList(DATE_STORAGE_KEY, "daty"),
   quickResponses: {
     yes: { id: QUICK_RESPONSE_IDS.yes, text: "TAK", audioUrl: "" },
     no: { id: QUICK_RESPONSE_IDS.no, text: "NIE", audioUrl: "" }
@@ -35,6 +41,15 @@ const quickResponses = document.querySelector(".quick-responses");
 const reactionList = document.getElementById("reactionList");
 const reactionInput = document.getElementById("reactionInput");
 const btnAddReaction = document.getElementById("btnAddReaction");
+const numberList = document.getElementById("numberList");
+const numberInput = document.getElementById("numberInput");
+const btnAddNumber = document.getElementById("btnAddNumber");
+const dateList = document.getElementById("dateList");
+const dateInput = document.getElementById("dateInput");
+const btnAddDate = document.getElementById("btnAddDate");
+const scrollShortcuts = document.querySelector(".scroll-shortcuts");
+const scrollShortcutsToggle = document.getElementById("scrollShortcutsToggle");
+const scrollShortcutLinks = document.getElementById("scrollShortcutLinks");
 
 function createId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -91,6 +106,24 @@ function saveReactionList() {
   }
 }
 
+function saveNumberList() {
+  try {
+    localStorage.setItem(NUMBER_STORAGE_KEY, JSON.stringify(state.numberList));
+  } catch (error) {
+    console.error("Nie udało się zapisać liczb lokalnie:", error);
+    showStatus("Nie udało się zapisać zmian na tym urządzeniu.");
+  }
+}
+
+function saveDateList() {
+  try {
+    localStorage.setItem(DATE_STORAGE_KEY, JSON.stringify(state.dateList));
+  } catch (error) {
+    console.error("Nie udało się zapisać dat lokalnie:", error);
+    showStatus("Nie udało się zapisać zmian na tym urządzeniu.");
+  }
+}
+
 function saveItemLocally(item) {
   const sentenceOwner = state.sentenceList.find((sentence) =>
     sentence.id === item.id || sentence.specialWords.some((word) => word.id === item.id));
@@ -100,6 +133,10 @@ function saveItemLocally(item) {
   }
   if (item.id.startsWith(REACTION_ID_PREFIX)) {
     saveReactionList();
+  } else if (item.id.startsWith(NUMBER_ID_PREFIX)) {
+    saveNumberList();
+  } else if (item.id.startsWith(DATE_ID_PREFIX)) {
+    saveDateList();
   }
 }
 
@@ -107,12 +144,21 @@ function getPersistedItem(item) {
   return state.sentenceList.find((sentence) =>
     sentence.id === item.id || sentence.specialWords.some((word) => word.id === item.id))
     || state.reactionList.find((reaction) => reaction.id === item.id)
+    || state.numberList.find((number) => number.id === item.id)
+    || state.dateList.find((date) => date.id === item.id)
     || Object.values(state.quickResponses).find((response) => response.id === item.id)
     || item;
 }
 
 function showStatus(message) {
   appStatus.textContent = message;
+}
+
+function getItemKind(id) {
+  if (id.startsWith(REACTION_ID_PREFIX)) return "reakcja";
+  if (id.startsWith(NUMBER_ID_PREFIX)) return "liczba";
+  if (id.startsWith(DATE_ID_PREFIX)) return "data";
+  return "zdanie";
 }
 
 function getSentenceCountLabel(count) {
@@ -153,6 +199,8 @@ async function loadItemsFromSupabase() {
 
   const remoteSentences = [];
   const remoteReactions = [];
+  const remoteNumbers = [];
+  const remoteDates = [];
   result.data.forEach((item) => {
     const id = String(item.id);
     const quickResponse = Object.values(state.quickResponses).find((response) => response.id === id);
@@ -160,6 +208,18 @@ async function loadItemsFromSupabase() {
       quickResponse.audioUrl = item.audio_url || "";
     } else if (id.startsWith(REACTION_ID_PREFIX)) {
       remoteReactions.push({
+        id,
+        text: item.text,
+        audioUrl: item.audio_url || ""
+      });
+    } else if (id.startsWith(NUMBER_ID_PREFIX)) {
+      remoteNumbers.push({
+        id,
+        text: item.text,
+        audioUrl: item.audio_url || ""
+      });
+    } else if (id.startsWith(DATE_ID_PREFIX)) {
+      remoteDates.push({
         id,
         text: item.text,
         audioUrl: item.audio_url || ""
@@ -193,10 +253,20 @@ async function loadItemsFromSupabase() {
   if (remoteReactions.length > 0) {
     state.reactionList = remoteReactions;
   }
+  if (remoteNumbers.length > 0) {
+    state.numberList = remoteNumbers;
+  }
+  if (remoteDates.length > 0) {
+    state.dateList = remoteDates;
+  }
   saveSentenceList();
   saveReactionList();
+  saveNumberList();
+  saveDateList();
   renderSentenceList();
   renderReactionList();
+  renderNumberList();
+  renderDateList();
   renderQuickResponses();
 }
 
@@ -268,11 +338,16 @@ async function deleteItemFromSupabase(id) {
 function playSentenceAudio(sentence) {
   if (!sentence.audioUrl) {
     const persistedItem = getPersistedItem(sentence);
-    const message = sentence.id.startsWith(REACTION_ID_PREFIX)
+    const itemKind = getItemKind(sentence.id);
+    const message = itemKind === "reakcja"
       ? "Ta reakcja nie ma jeszcze nagrania."
-      : persistedItem.id !== sentence.id
-        ? "To słowo nie ma jeszcze nagrania."
-        : "To zdanie nie ma jeszcze nagrania.";
+      : itemKind === "liczba"
+        ? "Ta liczba nie ma jeszcze nagrania."
+        : itemKind === "data"
+          ? "Ta data nie ma jeszcze nagrania."
+          : persistedItem.id !== sentence.id
+            ? "To słowo nie ma jeszcze nagrania."
+            : "To zdanie nie ma jeszcze nagrania.";
     showStatus(message);
     return;
   }
@@ -353,18 +428,48 @@ quickResponses.addEventListener("click", async (event) => {
 });
 
 function renderReactionList() {
-  reactionList.innerHTML = "";
+  renderCollectionList(state.reactionList, reactionList, {
+    stateKey: "reactionList",
+    kind: "reakcja",
+    accusative: "reakcję",
+    genitive: "reakcji",
+    emptyText: "Brak reakcji"
+  });
+}
 
-  if (state.reactionList.length === 0) {
+function renderNumberList() {
+  renderCollectionList(state.numberList, numberList, {
+    stateKey: "numberList",
+    kind: "liczba",
+    accusative: "liczbę",
+    genitive: "liczby",
+    emptyText: "Brak liczb"
+  });
+}
+
+function renderDateList() {
+  renderCollectionList(state.dateList, dateList, {
+    stateKey: "dateList",
+    kind: "data",
+    accusative: "datę",
+    genitive: "daty",
+    emptyText: "Brak dat"
+  });
+}
+
+function renderCollectionList(items, container, config) {
+  container.innerHTML = "";
+
+  if (items.length === 0) {
     const empty = document.createElement("div");
     empty.className = "reaction-empty";
     empty.setAttribute("role", "listitem");
-    empty.textContent = "Brak reakcji";
-    reactionList.appendChild(empty);
+    empty.textContent = config.emptyText;
+    container.appendChild(empty);
     return;
   }
 
-  state.reactionList.forEach((reaction) => {
+  items.forEach((item) => {
     const card = document.createElement("article");
     card.className = "reaction-card";
     card.setAttribute("role", "listitem");
@@ -372,42 +477,42 @@ function renderReactionList() {
       if (event.target.closest("button, input")) {
         return;
       }
-      playSentenceAudio(reaction);
+      playSentenceAudio(item);
     });
 
-    const isEditing = editingItemId === reaction.id;
-    const isRecording = activeSentenceId === reaction.id;
-    let reactionInputElement;
+    const isEditing = editingItemId === item.id;
+    const isRecording = activeSentenceId === item.id;
+    let itemInput;
     if (isEditing) {
-      reactionInputElement = document.createElement("input");
-      reactionInputElement.className = "reaction-edit-input";
-      reactionInputElement.type = "text";
-      reactionInputElement.maxLength = 80;
-      reactionInputElement.value = reaction.text;
-      reactionInputElement.setAttribute("aria-label", `Edytuj reakcję: ${reaction.text}`);
-      reactionInputElement.addEventListener("keydown", (event) => {
+      itemInput = document.createElement("input");
+      itemInput.className = "reaction-edit-input";
+      itemInput.type = "text";
+      itemInput.maxLength = 80;
+      itemInput.value = item.text;
+      itemInput.setAttribute("aria-label", `Edytuj ${config.accusative}: ${item.text}`);
+      itemInput.addEventListener("keydown", (event) => {
         if (event.key === "Enter") {
           event.preventDefault();
-          saveItemEdit(reaction, reactionInputElement);
+          saveItemEdit(item, itemInput);
         } else if (event.key === "Escape") {
           editingItemId = null;
-          renderReactionList();
+          renderCollectionList(items, container, config);
         }
       });
-      queueMicrotask(() => reactionInputElement.focus());
-      card.appendChild(reactionInputElement);
+      queueMicrotask(() => itemInput.focus());
+      card.appendChild(itemInput);
     } else {
       const playButton = document.createElement("button");
       playButton.type = "button";
       playButton.className = "reaction-play";
-      playButton.textContent = reaction.text;
-      playButton.title = reaction.audioUrl ? "Odtwórz reakcję" : "Najpierw nagraj reakcję";
-      playButton.setAttribute("aria-label", `Odtwórz reakcję: ${reaction.text}`);
-      playButton.addEventListener("click", () => playSentenceAudio(reaction));
+      playButton.textContent = item.text;
+      playButton.title = item.audioUrl ? `Odtwórz ${config.accusative}` : `Najpierw nagraj ${config.accusative}`;
+      playButton.setAttribute("aria-label", `Odtwórz ${config.accusative}: ${item.text}`);
+      playButton.addEventListener("click", () => playSentenceAudio(item));
       card.appendChild(playButton);
     }
 
-    if (reaction.audioUrl && !isRecording && !isEditing) {
+    if (item.audioUrl && !isRecording && !isEditing) {
       const recordedBadge = document.createElement("span");
       recordedBadge.className = "reaction-recorded";
       recordedBadge.textContent = "✓ Nagrane";
@@ -418,36 +523,39 @@ function renderReactionList() {
     actions.className = "reaction-actions";
 
     if (isEditing) {
-      const saveButton = createReactionAction("✓", "Zapisz reakcję", "edit");
-      saveButton.addEventListener("click", () => saveItemEdit(reaction, reactionInputElement));
+      const saveButton = createReactionAction("✓", `Zapisz ${config.accusative}`, "edit");
+      saveButton.addEventListener("click", () => saveItemEdit(item, itemInput));
       const cancelButton = createReactionAction("×", "Anuluj edycję", "");
       cancelButton.addEventListener("click", () => {
         editingItemId = null;
-        renderReactionList();
+        renderCollectionList(items, container, config);
       });
       actions.append(saveButton, cancelButton);
     } else {
-      const editButton = createReactionAction("✎", `Edytuj reakcję: ${reaction.text}`, "edit");
+      const editButton = createReactionAction("✎", `Edytuj ${config.accusative}: ${item.text}`, "edit");
       editButton.addEventListener("click", () => {
-        editingItemId = reaction.id;
-        renderReactionList();
+        editingItemId = item.id;
+        renderCollectionList(items, container, config);
       });
 
-      const recordButton = createReactionAction(isRecording ? "■" : "●", `${isRecording ? "Zatrzymaj nagrywanie" : "Nagraj"} reakcję: ${reaction.text}`, "record");
-      recordButton.addEventListener("click", async () => toggleRecording(reaction));
+      const recordButton = createReactionAction(isRecording ? "■" : "●", `${isRecording ? "Zatrzymaj nagrywanie" : "Nagraj"} ${config.accusative}: ${item.text}`, "record");
+      recordButton.addEventListener("click", async () => toggleRecording(item));
 
-      const deleteButton = createReactionAction("×", `Usuń reakcję: ${reaction.text}`, "delete");
+      const deleteButton = createReactionAction("×", `Usuń ${config.accusative}: ${item.text}`, "delete");
       deleteButton.addEventListener("click", async () => {
-        state.reactionList = state.reactionList.filter((item) => item.id !== reaction.id);
-        saveReactionList();
-        await deleteItemFromSupabase(reaction.id);
-        renderReactionList();
+        if (!window.confirm(`Czy na pewno chcesz usunąć ${config.genitive} „${item.text}”?`)) {
+          return;
+        }
+        state[config.stateKey] = state[config.stateKey].filter((listItem) => listItem.id !== item.id);
+        saveItemLocally(item);
+        await deleteItemFromSupabase(item.id);
+        renderCollectionList(state[config.stateKey], container, config);
       });
       actions.append(editButton, recordButton, deleteButton);
     }
 
     card.appendChild(actions);
-    reactionList.appendChild(card);
+    container.appendChild(card);
   });
 }
 
@@ -784,9 +892,11 @@ async function saveItemEdit(sentence, input) {
 
   const newText = input.value.trim();
   if (!newText) {
-    const itemType = sentence.id.startsWith(REACTION_ID_PREFIX)
-      ? "reakcji"
-      : getPersistedItem(sentence).id !== sentence.id ? "słowa" : "zdania";
+    const itemKind = getItemKind(sentence.id);
+    const itemType = itemKind === "reakcja" ? "reakcji"
+      : itemKind === "liczba" ? "liczby"
+        : itemKind === "data" ? "daty"
+          : getPersistedItem(sentence).id !== sentence.id ? "słowa" : "zdania";
     showStatus(`Treść ${itemType} nie może być pusta.`);
     input.focus();
     return;
@@ -811,10 +921,14 @@ async function saveItemEdit(sentence, input) {
   saveItemLocally(persistedItem);
   renderSentenceList();
   renderReactionList();
+  renderNumberList();
+  renderDateList();
   const synced = await upsertItemInSupabase(persistedItem);
-  const itemName = sentence.id.startsWith(REACTION_ID_PREFIX)
-    ? "Reakcja"
-    : persistedItem.id !== sentence.id ? "Słowo" : "Zdanie";
+  const itemKind = getItemKind(sentence.id);
+  const itemName = itemKind === "reakcja" ? "Reakcja"
+    : itemKind === "liczba" ? "Liczba"
+      : itemKind === "data" ? "Data"
+        : persistedItem.id !== sentence.id ? "Słowo" : "Zdanie";
   showStatus(synced ? `${itemName} zapisane.` : `${itemName} zapisane na tym urządzeniu, ale nie udało się zsynchronizować go z serwerem.`);
 }
 
@@ -828,6 +942,8 @@ function getRecordingItem(id) {
   return state.sentenceList.find((item) => item.id === id)
     || state.sentenceList.flatMap((item) => item.specialWords).find((word) => word.id === id)
     || state.reactionList.find((item) => item.id === id)
+    || state.numberList.find((item) => item.id === id)
+    || state.dateList.find((item) => item.id === id)
     || Object.values(state.quickResponses).find((item) => item.id === id);
 }
 
@@ -858,6 +974,8 @@ async function toggleRecording(sentence) {
     activeSentenceId = sentence.id;
     renderSentenceList();
     renderReactionList();
+    renderNumberList();
+    renderDateList();
     renderQuickResponses();
 
     recorder.ondataavailable = (event) => {
@@ -917,6 +1035,8 @@ async function toggleRecording(sentence) {
         activeSentenceId = null;
         renderSentenceList();
         renderReactionList();
+        renderNumberList();
+        renderDateList();
         renderQuickResponses();
       }
     };
@@ -957,24 +1077,39 @@ function addSentence() {
 }
 
 function addReaction() {
-  const value = reactionInput.value.trim();
+  addCollectionItem(reactionInput, "reactionList", REACTION_ID_PREFIX, "reakcję");
+}
+
+function addNumber() {
+  addCollectionItem(numberInput, "numberList", NUMBER_ID_PREFIX, "liczbę");
+}
+
+function addDate() {
+  addCollectionItem(dateInput, "dateList", DATE_ID_PREFIX, "datę");
+}
+
+function addCollectionItem(input, stateKey, idPrefix, itemLabel) {
+  const value = input.value.trim();
   if (!value) {
-    reactionInput.focus();
+    input.focus();
     return;
   }
 
   const item = {
-    id: `${REACTION_ID_PREFIX}${createId()}`,
+    id: `${idPrefix}${createId()}`,
     text: value,
     audioUrl: ""
   };
 
-  state.reactionList.push(item);
-  saveReactionList();
-  reactionInput.value = "";
+  state[stateKey].push(item);
+  saveItemLocally(item);
+  input.value = "";
   renderReactionList();
+  renderNumberList();
+  renderDateList();
   upsertItemInSupabase(item);
-  reactionInput.focus();
+  input.focus();
+  showStatus(`Dodano ${itemLabel}.`);
 }
 
 function handleSentenceInputKeydown(event) {
@@ -991,12 +1126,42 @@ function handleReactionInputKeydown(event) {
   }
 }
 
+function handleNumberInputKeydown(event) {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    addNumber();
+  }
+}
+
+function handleDateInputKeydown(event) {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    addDate();
+  }
+}
+
 btnAddSentence.addEventListener("click", addSentence);
 sentenceInput.addEventListener("keydown", handleSentenceInputKeydown);
 btnAddReaction.addEventListener("click", addReaction);
 reactionInput.addEventListener("keydown", handleReactionInputKeydown);
+btnAddNumber.addEventListener("click", addNumber);
+numberInput.addEventListener("keydown", handleNumberInputKeydown);
+btnAddDate.addEventListener("click", addDate);
+dateInput.addEventListener("keydown", handleDateInputKeydown);
+
+scrollShortcutsToggle.addEventListener("click", () => {
+  const isCollapsed = scrollShortcuts.classList.toggle("is-collapsed");
+  scrollShortcutsToggle.setAttribute("aria-expanded", String(!isCollapsed));
+  scrollShortcutsToggle.setAttribute("aria-label", isCollapsed ? "Rozwiń skróty" : "Zwiń skróty");
+  scrollShortcutsToggle.querySelector("span").textContent = isCollapsed ? "‹" : "›";
+  scrollShortcutLinks.querySelectorAll("a").forEach((link) => {
+    link.tabIndex = isCollapsed ? -1 : 0;
+  });
+});
 
 renderSentenceList();
 renderReactionList();
+renderNumberList();
+renderDateList();
 renderQuickResponses();
 loadItemsFromSupabase();

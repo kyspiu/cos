@@ -39,9 +39,131 @@ input {
     font: inherit;
 }
 
-@media (max-width: 900px) {
+html {
+    scroll-behavior: smooth;
+}
+
+.sentence-composer,
+.quick-responses,
+.reaction-section,
+#sentenceSection {
+    scroll-margin-top: 1.5rem;
+}
+
+.scroll-shortcuts {
+    position: fixed;
+    z-index: 10;
+    top: 50%;
+    right: 1rem;
+    display: grid;
+    gap: 0.45rem;
+    width: 7.5rem;
+    padding: 0.55rem;
+    border: 1px solid rgba(111, 146, 116, 0.24);
+    border-radius: 1rem;
+    background: rgba(255, 253, 249, 0.94);
+    box-shadow: 0 8px 22px var(--ui-shadow);
+    backdrop-filter: blur(8px);
+    transform: translateY(-50%);
+    transition: width 0.22s ease, gap 0.22s ease, padding 0.22s ease;
+}
+
+.scroll-shortcuts.is-collapsed {
+    gap: 0;
+    width: 3.2rem;
+    padding: 0.4rem;
+}
+
+.scroll-shortcuts-toggle {
+    display: grid;
+    width: 100%;
+    min-height: 2.8rem;
+    place-items: center;
+    border: 1px solid var(--ui-border);
+    border-radius: 0.7rem;
+    background: linear-gradient(180deg, #edf7e9 0%, #dfeee0 100%);
+    color: var(--ui-sage-dark);
+    font: inherit;
+    font-size: 1.8rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.scroll-shortcuts-toggle:focus-visible {
+    outline: 3px solid rgba(111, 146, 116, 0.55);
+    outline-offset: 2px;
+}
+
+.scroll-shortcut-links {
+    display: grid;
+    gap: 0.5rem;
+    max-height: 24rem;
+    overflow: hidden;
+    opacity: 1;
+    transform: translateX(0);
+    transition: max-height 0.22s ease, opacity 0.18s ease, transform 0.22s ease;
+}
+
+.scroll-shortcuts.is-collapsed .scroll-shortcut-links {
+    max-height: 0;
+    opacity: 0;
+    transform: translateX(0.5rem);
+}
+
+.scroll-shortcut-links a {
+    display: grid;
+    min-height: 2.8rem;
+    place-items: center;
+    padding: 0.35rem;
+    border: 1px solid var(--ui-border);
+    border-radius: 0.7rem;
+    background: linear-gradient(180deg, #edf7e9 0%, #dfeee0 100%);
+    color: var(--ui-ink);
+    font-size: 0.82rem;
+    font-weight: 700;
+    line-height: 1.15;
+    text-align: center;
+    text-decoration: none;
+}
+
+.scroll-shortcut-links a:hover {
+    filter: brightness(1.04);
+}
+
+.scroll-shortcut-links a:focus-visible {
+    outline: 3px solid rgba(111, 146, 116, 0.55);
+    outline-offset: 2px;
+}
+
+@media (max-width: 1100px) {
     body {
         zoom: 1;
+    }
+
+    .container {
+        padding-bottom: 9rem;
+    }
+
+    .scroll-shortcuts {
+        top: auto;
+        right: 0.75rem;
+        bottom: 0.75rem;
+        width: min(13rem, calc(100vw - 1.5rem));
+        transform: none;
+    }
+
+    .scroll-shortcut-links {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        max-height: 11rem;
+    }
+
+    .scroll-shortcuts.is-collapsed {
+        width: 3.2rem;
+    }
+
+    .scroll-shortcuts.is-collapsed .scroll-shortcut-links {
+        max-height: 0;
     }
 }
 
@@ -524,6 +646,16 @@ h2 {
     gap: 0.6rem;
 }
 
+.value-list {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+@media (max-width: 900px) {
+    .value-list {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
 .reaction-card {
     display: flex;
     flex-direction: column;
@@ -553,12 +685,14 @@ h2 {
 .reaction-play {
     flex: 1;
     min-width: 0;
+    min-height: 3rem;
+    padding: 0.3rem 0.2rem;
     border: 0;
     border-radius: 0.45rem;
     background: transparent;
     color: var(--ui-ink);
     font: inherit;
-    font-size: 0.95rem;
+    font-size: 1.1rem;
     font-weight: 700;
     line-height: 1.25;
     overflow-wrap: anywhere;
@@ -588,14 +722,14 @@ h2 {
 
 .reaction-action {
     min-width: 0;
-    min-height: 2.1rem;
-    padding: 0.2rem;
+    min-height: 1.9rem;
+    padding: 0.15rem;
     border: 1px solid var(--ui-border);
     border-radius: 0.5rem;
     background: #fffdf9;
     color: var(--ui-ink);
     font: inherit;
-    font-size: 1rem;
+    font-size: 0.92rem;
     font-weight: 700;
     line-height: 1;
     cursor: pointer;
@@ -776,7 +910,7 @@ main {
 
 @media (max-width: 560px) {
     .container {
-        padding: 1.5rem 0.75rem 2rem;
+        padding: 1.5rem 0.75rem 9rem;
     }
 
     .sentence-input-row {
@@ -831,5 +965,15 @@ main {
         width: 2.7rem;
         height: 2.7rem;
         font-size: 1.5rem;
+    }
+
+    .value-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
     }
 }
